@@ -1,0 +1,3 @@
+[submodule "squirrel_tracer/squirrel"]
+	path = squirrel_tracer/squirrel
+	url = https://github.com/albertodemichelis/squirrel.git
