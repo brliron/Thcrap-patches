@@ -249,8 +249,12 @@ static T *add_refcounted(json_t *new_objs, T *o)
 		memcmp(o, it->second.mem_dump, sizeof(T)) != 0 // The object changed
 		) {
 		json_t *dump = obj_to_json<T>(o);
-		if (it == objs_list->end() ||
+
+		// Even when the objects differ, if the JSON dump is identical, we don't need to replace it.
+		if (it == objs_list->end() || // Don't dereference it if it isn't valid
 			json_equal(dump, it->second.json)) {
+
+			// Free the existing object or create a new one
 			ObjectDump &obj_dump = (*objs_list)[o];
 			if (obj_dump.mem_dump) {
 				free(obj_dump.mem_dump);
@@ -259,12 +263,17 @@ static T *add_refcounted(json_t *new_objs, T *o)
 				json_decref(obj_dump.json);
 			}
 
+			// Save the new opject in the objs_list
 			obj_dump.mem_dump = (char*)malloc(sizeof(T));
 			memcpy(obj_dump.mem_dump, o, sizeof(T));
 			obj_dump.mem_dump_size = sizeof(T);
 			obj_dump.json = dump;
 
-			json_array_append(new_objs, dump);
+			json_t *out = json_object();
+			json_object_set_new(out, "type", json_string("object"));
+			json_object_set_new(out, "address", addr_to_json(o));
+			json_object_set(out, "content", dump);
+			json_array_append(new_objs, out);
 		}
 	}
 

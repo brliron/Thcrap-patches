@@ -207,7 +207,7 @@ extern "C" int BP_SQVM_execute_switch(x86_reg_t *regs, json_t *bp_info)
 	size_t i;
 	json_t *it;
 	json_array_foreach(new_objs, i, it) {
-		json_dumpf(it, file, JSON_COMPACT | JSON_ENCODE_ANY);
+		json_dumpf(it, file, JSON_COMPACT);
 		fwrite(",\n", 2, 1, file);
 	}
 	json_dumpf(instruction, file, 0);
