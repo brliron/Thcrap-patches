@@ -31,6 +31,10 @@
 #undef private
 
 #ifdef __cplusplus
+json_t *add_obj(json_t *new_objs, SQObject *o);
+#endif
+
+#ifdef __cplusplus
 extern "C" {
 #endif
 
