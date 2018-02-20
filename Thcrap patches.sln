@@ -5,18 +5,35 @@ VisualStudioVersion = 12.0.40629.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Squirrel tracer", "squirrel_tracer\Squirrel tracer.vcxproj", "{D1029658-5A4A-40DD-B401-514587934510}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Squirrel trace viewer", "Squirrel trace viewer\Squirrel trace viewer.csproj", "{36A98888-7769-4DCB-BE20-B84B6BA122CE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
 		Debug|Win32 = Debug|Win32
+		Release|Any CPU = Release|Any CPU
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D1029658-5A4A-40DD-B401-514587934510}.Debug|Any CPU.ActiveCfg = Debug|Win32
 		{D1029658-5A4A-40DD-B401-514587934510}.Debug|Win32.ActiveCfg = Debug|Win32
 		{D1029658-5A4A-40DD-B401-514587934510}.Debug|Win32.Build.0 = Debug|Win32
+		{D1029658-5A4A-40DD-B401-514587934510}.Release|Any CPU.ActiveCfg = Release|Win32
 		{D1029658-5A4A-40DD-B401-514587934510}.Release|Win32.ActiveCfg = Release|Win32
 		{D1029658-5A4A-40DD-B401-514587934510}.Release|Win32.Build.0 = Release|Win32
+		{36A98888-7769-4DCB-BE20-B84B6BA122CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{36A98888-7769-4DCB-BE20-B84B6BA122CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{36A98888-7769-4DCB-BE20-B84B6BA122CE}.Debug|Win32.ActiveCfg = Debug|Any CPU
+		{36A98888-7769-4DCB-BE20-B84B6BA122CE}.Debug|Win32.Build.0 = Debug|Any CPU
+		{36A98888-7769-4DCB-BE20-B84B6BA122CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{36A98888-7769-4DCB-BE20-B84B6BA122CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{36A98888-7769-4DCB-BE20-B84B6BA122CE}.Release|Win32.ActiveCfg = Release|Any CPU
+		{36A98888-7769-4DCB-BE20-B84B6BA122CE}.Release|Win32.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3268659A-EE6E-467D-95B3-EBB25E585399}
 	EndGlobalSection
 EndGlobal
