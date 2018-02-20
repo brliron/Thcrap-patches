@@ -60,7 +60,7 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>$(ThcrapDir)\bin\thcrap_d.lib;$(ThcrapDir)\bin\jansson_d.lib;$(ThcrapDir)\bin\win32_utf8_dynamic_x86_d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(ThcrapDir)\bin\thcrap_d.lib;$(ThcrapDir)\bin\jansson_d.lib;$(ThcrapDir)\bin\win32_utf8_dynamic_x86_debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
