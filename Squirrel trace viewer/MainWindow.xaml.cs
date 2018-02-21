@@ -85,13 +85,22 @@ namespace Squirrel_trace_viewer
             }
 
             JArray root = (JArray)rootToken;
+            List<Instruction> list = new List<Instruction>();
+            Dictionary<UInt32, AElement> objects = new Dictionary<uint, AElement>();
             foreach (JObject it in root)
             {
                 if ((string)it["type"] == "instruction")
-                    Console.WriteLine((string)it["op"]);
+                {
+                    list.Add(new Instruction(it, objects));
+                }
                 else if ((string)it["type"] == "object")
-                    Console.WriteLine((string)it["address"]);
+                {
+                    UInt32 addr = AObject.StrToAddr((string)it["address"]);
+                    objects[addr] = new BoringObject(addr, it["content"]);
+                }
             }
+
+            grid.ItemsSource = list;
             return true;
         }
     }
