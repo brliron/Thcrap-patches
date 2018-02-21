@@ -3,9 +3,9 @@
 #include <list>
 #include <map>
 
-template<typename T> static T *add_refcounted(json_t *new_objs, T *o);
+template<typename T> static T *add_refcounted(FILE *file, T *o);
 template<typename T> static json_t *obj_to_json(T *o);
-template<typename T> static void recurse_add_obj(json_t *new_objs, T *o);
+template<typename T> static void recurse_add_obj(FILE *file, T *o);
 
 
 static json_t *addr_to_json(void *addr)
@@ -23,7 +23,7 @@ static json_t *hex_to_json(uint32_t hex)
 }
 
 template<> static json_t *obj_to_json(SQString *o) { return json_stringn(o->_val, o->_len); }
-template<> static void recurse_add_obj(json_t *new_objs, SQString *o) {}
+template<> static void recurse_add_obj(FILE *file, SQString *o) {}
 
 template<> static json_t *obj_to_json(SQTable *o)
 {
@@ -37,11 +37,11 @@ template<> static json_t *obj_to_json(SQTable *o)
 	}
 	return res;
 }
-template<> static void recurse_add_obj(json_t *new_objs, SQTable *o)
+template<> static void recurse_add_obj(FILE *file, SQTable *o)
 {
 	for (int i = 0; i < o->_numofnodes; i++) {
-		add_obj(new_objs, &o->_nodes[i].key);
-		add_obj(new_objs, &o->_nodes[i].val);
+		add_obj(file, &o->_nodes[i].key);
+		add_obj(file, &o->_nodes[i].val);
 	}
 }
 
@@ -53,10 +53,10 @@ template<> static json_t *obj_to_json(SQArray *o)
 	}
 	return res;
 }
-template<> static void recurse_add_obj(json_t *new_objs, SQArray *o)
+template<> static void recurse_add_obj(FILE *file, SQArray *o)
 {
 	for (unsigned int i = 0; i < o->_values.size(); i++) {
-		add_obj(new_objs, &o->_values._vals[i]);
+		add_obj(file, &o->_values._vals[i]);
 	}
 }
 
@@ -77,7 +77,7 @@ template<> static json_t *obj_to_json(SQUserData *o)
 	free(string);
 	return res;
 }
-template<> static void recurse_add_obj(json_t *new_objs, SQUserData *o) {}
+template<> static void recurse_add_obj(FILE *file, SQUserData *o) {}
 
 template<> static json_t *obj_to_json(SQClosure *o)
 {
@@ -86,9 +86,9 @@ template<> static json_t *obj_to_json(SQClosure *o)
 	json_object_set_new(res, "_function", addr_to_json(o->_function));
 	return res;
 }
-template<> static void recurse_add_obj(json_t *new_objs, SQClosure *o)
+template<> static void recurse_add_obj(FILE *file, SQClosure *o)
 {
-	add_refcounted<SQFunctionProto>(new_objs, o->_function);
+	add_refcounted<SQFunctionProto>(file, o->_function);
 }
 
 template<> static json_t *obj_to_json(SQNativeClosure *o)
@@ -99,9 +99,9 @@ template<> static json_t *obj_to_json(SQNativeClosure *o)
 	json_object_set_new(res, "_function", hex_to_json((uint32_t)o->_function));
 	return res;
 }
-template<> static void recurse_add_obj(json_t *new_objs, SQNativeClosure *o)
+template<> static void recurse_add_obj(FILE *file, SQNativeClosure *o)
 {
-	add_obj(new_objs, &o->_name);
+	add_obj(file, &o->_name);
 }
 
 template<> static json_t *obj_to_json(SQGenerator *o)
@@ -112,9 +112,9 @@ template<> static json_t *obj_to_json(SQGenerator *o)
 	// We may also want to print some things from SQVM::CallInfo _ci and from SQGeneratorState _state
 	return res;
 }
-template<> static void recurse_add_obj(json_t *new_objs, SQGenerator *o)
+template<> static void recurse_add_obj(FILE *file, SQGenerator *o)
 {
-	add_obj(new_objs, &o->_closure);
+	add_obj(file, &o->_closure);
 }
 
 template<> static json_t *obj_to_json(SQFunctionProto *o)
@@ -125,10 +125,10 @@ template<> static json_t *obj_to_json(SQFunctionProto *o)
 	json_object_set_new(res, "_name", addr_to_json(&o->_name));
 	return res;
 }
-template<> static void recurse_add_obj(json_t *new_objs, SQFunctionProto *o)
+template<> static void recurse_add_obj(FILE *file, SQFunctionProto *o)
 {
-	add_obj(new_objs, &o->_sourcename);
-	add_obj(new_objs, &o->_name);
+	add_obj(file, &o->_sourcename);
+	add_obj(file, &o->_name);
 }
 
 template<> static json_t *obj_to_json(SQClassMemberVec *o)
@@ -143,7 +143,7 @@ template<> static json_t *obj_to_json(SQClassMemberVec *o)
 	}
 	return res;
 }
-template<> static void recurse_add_obj(json_t *new_objs, SQClassMemberVec *o) {}
+template<> static void recurse_add_obj(FILE *file, SQClassMemberVec *o) {}
 
 template<> static json_t *obj_to_json(SQClass *o)
 {
@@ -157,14 +157,14 @@ template<> static json_t *obj_to_json(SQClass *o)
 	json_object_set_new(res, "_methods", addr_to_json(&o->_methods));
 	return res;
 }
-template<> static void recurse_add_obj(json_t *new_objs, SQClass *o)
+template<> static void recurse_add_obj(FILE *file, SQClass *o)
 {
 	if (o->_base) {
-		add_refcounted<SQClass>(new_objs, o->_base);
+		add_refcounted<SQClass>(file, o->_base);
 	}
-	add_refcounted<SQTable>(new_objs, o->_members);
-	add_refcounted<SQClassMemberVec>(new_objs, &o->_defaultvalues);
-	add_refcounted<SQClassMemberVec>(new_objs, &o->_methods);
+	add_refcounted<SQTable>(file, o->_members);
+	add_refcounted<SQClassMemberVec>(file, &o->_defaultvalues);
+	add_refcounted<SQClassMemberVec>(file, &o->_methods);
 }
 
 template<> static json_t *obj_to_json(SQInstance *o)
@@ -183,11 +183,11 @@ template<> static json_t *obj_to_json(SQInstance *o)
 	json_object_set_new(res, "_values", addr_to_json(&o->_values));
 	return res;
 }
-template<> static void recurse_add_obj(json_t *new_objs, SQInstance *o)
+template<> static void recurse_add_obj(FILE *file, SQInstance *o)
 {
-	add_refcounted<SQClass>(new_objs, o->_class);
+	add_refcounted<SQClass>(file, o->_class);
 	for (size_t i = 0; i < o->_class->_defaultvalues.size(); i++) {
-		add_obj(new_objs, &o->_values[i]);
+		add_obj(file, &o->_values[i]);
 	}
 }
 
@@ -198,9 +198,9 @@ template<> static json_t *obj_to_json(SQWeakRef *o)
 	json_object_set_new(res, "_obj", addr_to_json(&o->_obj));
 	return res;
 }
-template<> static void recurse_add_obj(json_t *new_objs, SQWeakRef *o)
+template<> static void recurse_add_obj(FILE *file, SQWeakRef *o)
 {
-	add_obj(new_objs, &o->_obj);
+	add_obj(file, &o->_obj);
 }
 
 template<> static json_t *obj_to_json(SQOuter *o)
@@ -211,10 +211,10 @@ template<> static json_t *obj_to_json(SQOuter *o)
 	json_object_set_new(res, "_value", addr_to_json(&o->_value));
 	return res;
 }
-template<> static void recurse_add_obj(json_t *new_objs, SQOuter *o)
+template<> static void recurse_add_obj(FILE *file, SQOuter *o)
 {
-	add_obj(new_objs, o->_valptr);
-	add_obj(new_objs, &o->_value);
+	add_obj(file, o->_valptr);
+	add_obj(file, &o->_value);
 }
 
 struct ObjectDump
@@ -228,7 +228,7 @@ static std::list<void*> *stack = nullptr;
 std::map<void*, ObjectDump> *objs_list = nullptr;
 
 template<typename T>
-static T *add_refcounted(json_t *new_objs, T *o)
+static T *add_refcounted(FILE *file, T *o)
 {
 	if (!stack) {
 		stack = new std::list<void*>;
@@ -273,17 +273,18 @@ static T *add_refcounted(json_t *new_objs, T *o)
 			json_object_set_new(out, "type", json_string("object"));
 			json_object_set_new(out, "address", addr_to_json(o));
 			json_object_set(out, "content", dump);
-			json_array_append(new_objs, out);
+			json_dumpf(out, file, JSON_COMPACT);
+			fwrite(",\n", 2, 1, file);
 		}
 	}
 
-	recurse_add_obj<T>(new_objs, o);
+	recurse_add_obj<T>(file, o);
 
 	stack->pop_back();
 	return o;
 }
 
-json_t *add_obj(json_t *new_objs, SQObject *o)
+json_t *add_obj(FILE *file, SQObject *o)
 {
 	if (!ISREFCOUNTED(o->_type)) {
 		switch (o->_type) {
@@ -315,43 +316,43 @@ json_t *add_obj(json_t *new_objs, SQObject *o)
 	else {
 		switch (o->_type) {
 		case OT_STRING:
-			return addr_to_json(add_refcounted<SQString>(new_objs, o->_unVal.pString));
+			return addr_to_json(add_refcounted<SQString>(file, o->_unVal.pString));
 
 		case OT_TABLE:
-			return addr_to_json(add_refcounted<SQTable>(new_objs, o->_unVal.pTable));
+			return addr_to_json(add_refcounted<SQTable>(file, o->_unVal.pTable));
 
 		case OT_ARRAY:
-			return addr_to_json(add_refcounted<SQArray>(new_objs, o->_unVal.pArray));
+			return addr_to_json(add_refcounted<SQArray>(file, o->_unVal.pArray));
 
 		case OT_USERDATA:
-			return addr_to_json(add_refcounted<SQUserData>(new_objs, o->_unVal.pUserData));
+			return addr_to_json(add_refcounted<SQUserData>(file, o->_unVal.pUserData));
 
 		case OT_CLOSURE:
-			return addr_to_json(add_refcounted<SQClosure>(new_objs, o->_unVal.pClosure));
+			return addr_to_json(add_refcounted<SQClosure>(file, o->_unVal.pClosure));
 
 		case OT_NATIVECLOSURE:
-			return addr_to_json(add_refcounted<SQNativeClosure>(new_objs, o->_unVal.pNativeClosure));
+			return addr_to_json(add_refcounted<SQNativeClosure>(file, o->_unVal.pNativeClosure));
 
 		case OT_GENERATOR:
-			return addr_to_json(add_refcounted<SQGenerator>(new_objs, o->_unVal.pGenerator));
+			return addr_to_json(add_refcounted<SQGenerator>(file, o->_unVal.pGenerator));
 
 		case OT_THREAD:
 			return json_string("<thread>"); // Type: SQVM. I don't think we're interested by its content.
 
 		case OT_FUNCPROTO:
-			return addr_to_json(add_refcounted<SQFunctionProto>(new_objs, o->_unVal.pFunctionProto));
+			return addr_to_json(add_refcounted<SQFunctionProto>(file, o->_unVal.pFunctionProto));
 
 		case OT_CLASS:
-			return addr_to_json(add_refcounted<SQClass>(new_objs, o->_unVal.pClass));
+			return addr_to_json(add_refcounted<SQClass>(file, o->_unVal.pClass));
 
 		case OT_INSTANCE:
-			return addr_to_json(add_refcounted<SQInstance>(new_objs, o->_unVal.pInstance));
+			return addr_to_json(add_refcounted<SQInstance>(file, o->_unVal.pInstance));
 
 		case OT_WEAKREF:
-			return addr_to_json(add_refcounted<SQWeakRef>(new_objs, o->_unVal.pWeakRef));
+			return addr_to_json(add_refcounted<SQWeakRef>(file, o->_unVal.pWeakRef));
 
 		case OT_OUTER:
-			return addr_to_json(add_refcounted<SQOuter>(new_objs, o->_unVal.pOuter));
+			return addr_to_json(add_refcounted<SQOuter>(file, o->_unVal.pOuter));
 
 		default:
 			char string[] = "<unknown refcounted type 0000000000>";

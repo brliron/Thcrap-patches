@@ -10,6 +10,7 @@
 #pragma once
 
 #include <thcrap.h>
+#include <stdio.h>
 
 #ifdef Yield
 # undef Yield
@@ -31,7 +32,7 @@
 #undef private
 
 #ifdef __cplusplus
-json_t *add_obj(json_t *new_objs, SQObject *o);
+json_t *add_obj(FILE *file, SQObject *o);
 #endif
 
 #ifdef __cplusplus

@@ -100,18 +100,18 @@ static std::vector<OpcodeDescriptor>	opcodes = {
   { "close",		ARG_NONE,	ARG_STACK,	ARG_NONE,	ARG_NONE }
 };
 
-static json_t *arg_to_json(SQVM *self, json_t *new_objs, ArgType type, uint32_t arg)
+static json_t *arg_to_json(SQVM *self, FILE *file, ArgType type, uint32_t arg)
 {
 	switch (type) {
 	case ARG_NONE:
 		return json_null();
 
 	case ARG_STACK:
-		return add_obj(new_objs, &self->_stack._vals[self->_stackbase + arg]);
+		return add_obj(file, &self->_stack._vals[self->_stackbase + arg]);
 		break;
 
 	case ARG_LITERAL:
-		return add_obj(new_objs, &self->ci->_literals[arg]);
+		return add_obj(file, &self->ci->_literals[arg]);
 
 	case ARG_IMMEDIATE:
 		return json_integer(arg);
@@ -195,27 +195,19 @@ extern "C" int BP_SQVM_execute_switch(x86_reg_t *regs, json_t *bp_info)
 	EnterCriticalSection(&cs);
 	OpcodeDescriptor *desc = &opcodes[_i_->op];
 
-	json_t *new_objs = json_array();
 	json_t *instruction = json_object();
-	json_object_set_new(instruction, "__type", json_string("instruction"));
+	json_object_set_new(instruction, "type", json_string("instruction"));
 	json_object_set_new(instruction, "op",     json_string(desc->name));
-	json_object_set_new(instruction, "arg0",   arg_to_json(self, new_objs, desc->arg0, _i_->_arg0));
-	json_object_set_new(instruction, "arg1",   arg_to_json(self, new_objs, desc->arg1, _i_->_arg1));
-	json_object_set_new(instruction, "arg2",   arg_to_json(self, new_objs, desc->arg2, _i_->_arg2));
-	json_object_set_new(instruction, "arg3",   arg_to_json(self, new_objs, desc->arg3, _i_->_arg3));
+	json_object_set_new(instruction, "arg0",   arg_to_json(self, file, desc->arg0, _i_->_arg0));
+	json_object_set_new(instruction, "arg1",   arg_to_json(self, file, desc->arg1, _i_->_arg1));
+	json_object_set_new(instruction, "arg2",   arg_to_json(self, file, desc->arg2, _i_->_arg2));
+	json_object_set_new(instruction, "arg3",   arg_to_json(self, file, desc->arg3, _i_->_arg3));
 
-	size_t i;
-	json_t *it;
-	json_array_foreach(new_objs, i, it) {
-		json_dumpf(it, file, JSON_COMPACT);
-		fwrite(",\n", 2, 1, file);
-	}
-	json_dumpf(instruction, file, 0);
+	json_dumpf(instruction, file, JSON_COMPACT);
 	fwrite(",\n", 2, 1, file);
 	fflush(file);
 
 	json_decref(instruction);
-	json_decref(new_objs);
 
 	LeaveCriticalSection(&cs);
 	return 1;
