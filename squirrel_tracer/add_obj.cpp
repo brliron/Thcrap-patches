@@ -219,7 +219,7 @@ template<> static void recurse_add_obj(FILE *file, SQOuter *o)
 
 struct ObjectDump
 {
-	char *mem_dump;
+	//char *mem_dump;
 	size_t mem_dump_size;
 	json_t *json;
 };
@@ -245,8 +245,8 @@ static T *add_refcounted(FILE *file, T *o)
 
 	const auto& it = objs_list->find(o);
 	if (it == objs_list->end() || // We don't have any object with this pointer
-		it->second.mem_dump_size != sizeof(T) || // The object we have doesn't have the same size
-		memcmp(o, it->second.mem_dump, sizeof(T)) != 0 // The object changed
+		it->second.mem_dump_size != sizeof(T)/* || // The object we have doesn't have the same size
+		memcmp(o, it->second.mem_dump, sizeof(T)) != 0*/ // The object changed
 		) {
 		json_t *dump = obj_to_json<T>(o);
 
@@ -255,16 +255,16 @@ static T *add_refcounted(FILE *file, T *o)
 			json_equal(dump, it->second.json) == 0) {
 			// Free the existing object or create a new one
 			ObjectDump &obj_dump = (*objs_list)[o];
-			if (obj_dump.mem_dump) {
+			/*if (obj_dump.mem_dump) {
 				free(obj_dump.mem_dump);
-			}
+			}*/
 			if (obj_dump.json) {
 				json_decref(obj_dump.json);
 			}
 
 			// Save the new opject in the objs_list
-			obj_dump.mem_dump = (char*)malloc(sizeof(T));
-			memcpy(obj_dump.mem_dump, o, sizeof(T));
+			//obj_dump.mem_dump = (char*)malloc(sizeof(T));
+			//memcpy(obj_dump.mem_dump, o, sizeof(T));
 			obj_dump.mem_dump_size = sizeof(T);
 			obj_dump.json = dump;
 
