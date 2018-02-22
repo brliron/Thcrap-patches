@@ -32,7 +32,47 @@
 #undef private
 
 #ifdef __cplusplus
+
+#include <map>
+
 json_t *add_obj(FILE *file, SQObject *o);
+
+class ObjectDump
+{
+private:
+	HANDLE hMap;
+
+	void *pointer;
+	size_t size;
+	json_t *json;
+
+	void map();
+	void free();
+
+public:
+	ObjectDump();
+	ObjectDump(const ObjectDump& other);
+	ObjectDump(const void *pointer, size_t size, json_t *json);
+	~ObjectDump();
+	ObjectDump& operator=(const ObjectDump& other);
+
+	operator bool();
+	void set(const void *pointer, size_t size, json_t *json);
+	bool equal(const void *mem_dump, size_t size);
+	bool equal(const json_t *json);
+
+	void unmap();
+};
+
+class ObjectDumpCollection : public std::map<void*, ObjectDump>
+{
+public:
+	ObjectDumpCollection();
+	~ObjectDumpCollection();
+
+	void unmapAll();
+};
+
 #endif
 
 #ifdef __cplusplus

@@ -79,6 +79,7 @@
   <ItemGroup>
     <ClInclude Include="Squirrel tracer.h" />
     <ClCompile Include="add_obj.cpp" />
+    <ClCompile Include="ObjectDump.cpp" />
     <ClCompile Include="printObj.cpp" />
     <ClCompile Include="Squirrel tracer.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>

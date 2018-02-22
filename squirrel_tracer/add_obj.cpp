@@ -1,7 +1,6 @@
 #include <Squirrel tracer.h>
 #include <vector>
 #include <list>
-#include <map>
 
 template<typename T> static T *add_refcounted(FILE *file, T *o);
 template<typename T> static json_t *obj_to_json(T *o);
@@ -217,15 +216,8 @@ template<> static void recurse_add_obj(FILE *file, SQOuter *o)
 	json_decref(add_obj(file, &o->_value));
 }
 
-struct ObjectDump
-{
-	//char *mem_dump;
-	size_t mem_dump_size;
-	json_t *json;
-};
-
 static std::list<void*> *stack = nullptr;
-std::map<void*, ObjectDump> *objs_list = nullptr;
+static ObjectDumpCollection *objs_list = nullptr;
 
 template<typename T>
 static T *add_refcounted(FILE *file, T *o)
@@ -234,7 +226,7 @@ static T *add_refcounted(FILE *file, T *o)
 		stack = new std::list<void*>;
 	}
 	if (!objs_list) {
-		objs_list = new std::map<void*, ObjectDump>;
+		objs_list = new ObjectDumpCollection();
 	}
 
 	if (std::count(stack->begin(), stack->end(), o) > 0) {
@@ -243,39 +235,23 @@ static T *add_refcounted(FILE *file, T *o)
 	}
 	stack->push_back(o);
 
-	const auto& it = objs_list->find(o);
-	if (it == objs_list->end() || // We don't have any object with this pointer
-		it->second.mem_dump_size != sizeof(T)/* || // The object we have doesn't have the same size
-		memcmp(o, it->second.mem_dump, sizeof(T)) != 0*/ // The object changed
-		) {
-		json_t *dump = obj_to_json<T>(o);
+	ObjectDump& dump = (*objs_list)[o];
+	if (dump.equal(o, sizeof(T)) == false) {
+		json_t *obj_json = obj_to_json<T>(o);
 
 		// Even when the objects differ, if the JSON dump is identical, we don't need to replace it.
-		if (it == objs_list->end() || // Don't dereference it if it isn't valid
-			json_equal(dump, it->second.json) == 0) {
-			// Free the existing object or create a new one
-			ObjectDump &obj_dump = (*objs_list)[o];
-			/*if (obj_dump.mem_dump) {
-				free(obj_dump.mem_dump);
-			}*/
-			if (obj_dump.json) {
-				json_decref(obj_dump.json);
-			}
-
-			// Save the new opject in the objs_list
-			//obj_dump.mem_dump = (char*)malloc(sizeof(T));
-			//memcpy(obj_dump.mem_dump, o, sizeof(T));
-			obj_dump.mem_dump_size = sizeof(T);
-			obj_dump.json = dump;
+		if (dump.equal(obj_json) == 0) {
+			dump.set(o, sizeof(T), obj_json);
 
 			json_t *out = json_object();
 			json_object_set_new(out, "type", json_string("object"));
 			json_object_set_new(out, "address", addr_to_json(o));
-			json_object_set(out, "content", dump);
+			json_object_set(out, "content", obj_json);
 			json_dumpf(out, file, JSON_COMPACT);
 			fwrite(",\n", 2, 1, file);
 			json_decref(out);
 		}
+		json_decref(obj_json);
 	}
 
 	recurse_add_obj<T>(file, o);
