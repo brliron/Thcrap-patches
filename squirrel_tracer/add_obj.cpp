@@ -40,8 +40,8 @@ template<> static json_t *obj_to_json(SQTable *o)
 template<> static void recurse_add_obj(FILE *file, SQTable *o)
 {
 	for (int i = 0; i < o->_numofnodes; i++) {
-		add_obj(file, &o->_nodes[i].key);
-		add_obj(file, &o->_nodes[i].val);
+		json_decref(add_obj(file, &o->_nodes[i].key));
+		json_decref(add_obj(file, &o->_nodes[i].val));
 	}
 }
 
@@ -56,7 +56,7 @@ template<> static json_t *obj_to_json(SQArray *o)
 template<> static void recurse_add_obj(FILE *file, SQArray *o)
 {
 	for (unsigned int i = 0; i < o->_values.size(); i++) {
-		add_obj(file, &o->_values._vals[i]);
+		json_decref(add_obj(file, &o->_values._vals[i]));
 	}
 }
 
@@ -101,7 +101,7 @@ template<> static json_t *obj_to_json(SQNativeClosure *o)
 }
 template<> static void recurse_add_obj(FILE *file, SQNativeClosure *o)
 {
-	add_obj(file, &o->_name);
+	json_decref(add_obj(file, &o->_name));
 }
 
 template<> static json_t *obj_to_json(SQGenerator *o)
@@ -114,7 +114,7 @@ template<> static json_t *obj_to_json(SQGenerator *o)
 }
 template<> static void recurse_add_obj(FILE *file, SQGenerator *o)
 {
-	add_obj(file, &o->_closure);
+	json_decref(add_obj(file, &o->_closure));
 }
 
 template<> static json_t *obj_to_json(SQFunctionProto *o)
@@ -127,8 +127,8 @@ template<> static json_t *obj_to_json(SQFunctionProto *o)
 }
 template<> static void recurse_add_obj(FILE *file, SQFunctionProto *o)
 {
-	add_obj(file, &o->_sourcename);
-	add_obj(file, &o->_name);
+	json_decref(add_obj(file, &o->_sourcename));
+	json_decref(add_obj(file, &o->_name));
 }
 
 template<> static json_t *obj_to_json(SQClassMemberVec *o)
@@ -187,7 +187,7 @@ template<> static void recurse_add_obj(FILE *file, SQInstance *o)
 {
 	add_refcounted<SQClass>(file, o->_class);
 	for (size_t i = 0; i < o->_class->_defaultvalues.size(); i++) {
-		add_obj(file, &o->_values[i]);
+		json_decref(add_obj(file, &o->_values[i]));
 	}
 }
 
@@ -200,7 +200,7 @@ template<> static json_t *obj_to_json(SQWeakRef *o)
 }
 template<> static void recurse_add_obj(FILE *file, SQWeakRef *o)
 {
-	add_obj(file, &o->_obj);
+	json_decref(add_obj(file, &o->_obj));
 }
 
 template<> static json_t *obj_to_json(SQOuter *o)
@@ -213,8 +213,8 @@ template<> static json_t *obj_to_json(SQOuter *o)
 }
 template<> static void recurse_add_obj(FILE *file, SQOuter *o)
 {
-	add_obj(file, o->_valptr);
-	add_obj(file, &o->_value);
+	json_decref(add_obj(file, o->_valptr));
+	json_decref(add_obj(file, &o->_value));
 }
 
 struct ObjectDump
@@ -238,7 +238,7 @@ static T *add_refcounted(FILE *file, T *o)
 	}
 
 	if (std::count(stack->begin(), stack->end(), o) > 0) {
-		log_print("<infinite recursion detected>");
+		log_print("<Squirrel tracer - infinite recursion detected>\n");
 		return o;
 	}
 	stack->push_back(o);
@@ -252,8 +252,7 @@ static T *add_refcounted(FILE *file, T *o)
 
 		// Even when the objects differ, if the JSON dump is identical, we don't need to replace it.
 		if (it == objs_list->end() || // Don't dereference it if it isn't valid
-			json_equal(dump, it->second.json)) {
-
+			json_equal(dump, it->second.json) == 0) {
 			// Free the existing object or create a new one
 			ObjectDump &obj_dump = (*objs_list)[o];
 			if (obj_dump.mem_dump) {
@@ -275,6 +274,7 @@ static T *add_refcounted(FILE *file, T *o)
 			json_object_set(out, "content", dump);
 			json_dumpf(out, file, JSON_COMPACT);
 			fwrite(",\n", 2, 1, file);
+			json_decref(out);
 		}
 	}
 
