@@ -173,6 +173,8 @@ static json_t *arg_to_json(SQVM *self, FILE *file, ArgType type, uint32_t arg)
 	}
 }
 
+ObjectDumpCollection *objs_list = nullptr;
+
 /**
   * switch instruction in SQVM::execute
   * The breakpoint should cover the jmp [opcode*4+jump_table_addr]
@@ -191,6 +193,7 @@ extern "C" int BP_SQVM_execute_switch(x86_reg_t *regs, json_t *bp_info)
 		file = fopen("trace.json", "w");
 		fwrite("[\n", 2, 1, file);
 		InitializeCriticalSection(&cs);
+		objs_list = new ObjectDumpCollection();
 	}
 	EnterCriticalSection(&cs);
 	OpcodeDescriptor *desc = &opcodes[_i_->op];
@@ -209,6 +212,7 @@ extern "C" int BP_SQVM_execute_switch(x86_reg_t *regs, json_t *bp_info)
 
 	json_decref(instruction);
 
+	objs_list->unmapAll();
 	LeaveCriticalSection(&cs);
 	return 1;
 }

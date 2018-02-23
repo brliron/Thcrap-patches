@@ -40,7 +40,13 @@ void ObjectDump::set(const void *mem_dump, size_t size, json_t *json)
 {
 	this->free();
 	this->hMap = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, size, nullptr);
+	if (this->hMap == nullptr) {
+		log_mboxf("Error", MB_OK, "CreateFileMapping failed with error code %d", GetLastError());
+	}
 	this->pointer = MapViewOfFile(this->hMap, FILE_MAP_WRITE, 0, 0, size); // This pointer may be remapped as FILE_MAP_READ later
+	if (this->pointer == nullptr) {
+		log_mboxf("Error", MB_OK, "MapViewOfFile failed with error code %d", GetLastError());
+	}
 	memcpy(this->pointer, mem_dump, size);
 	this->size = size;
 	this->json = json;

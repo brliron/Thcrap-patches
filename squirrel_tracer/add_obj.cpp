@@ -217,16 +217,13 @@ template<> static void recurse_add_obj(FILE *file, SQOuter *o)
 }
 
 static std::list<void*> *stack = nullptr;
-static ObjectDumpCollection *objs_list = nullptr;
+extern ObjectDumpCollection *objs_list;
 
 template<typename T>
 static T *add_refcounted(FILE *file, T *o)
 {
 	if (!stack) {
 		stack = new std::list<void*>;
-	}
-	if (!objs_list) {
-		objs_list = new ObjectDumpCollection();
 	}
 
 	if (std::count(stack->begin(), stack->end(), o) > 0) {
