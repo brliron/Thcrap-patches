@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Controls;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -13,6 +14,14 @@ namespace Squirrel_trace_viewer
         public abstract string Description { get; }
 
         public override string ToString() { return Description; }
+
+        public virtual string GetTreeLabel()
+        {
+            return this.Description;
+        }
+
+        public virtual void AddChildsToTree(ItemCollection items, List<AElement> stack)
+        { }
 
         public static AElement Create(JToken obj, Dictionary<UInt32, AElement> objects)
         {
@@ -45,6 +54,12 @@ namespace Squirrel_trace_viewer
                     }
                     else
                         return new String(obj);
+
+                case JTokenType.Object:
+                    return new JsonObject(obj, objects);
+
+                case JTokenType.Array:
+                    return new JsonArray(obj, objects);
 
                 default:
                     return new String(obj.ToString());
@@ -129,7 +144,6 @@ namespace Squirrel_trace_viewer
 
     abstract class AObject : AElement
     {
-        protected UInt32 address;
         const string head = "POINTER:";
 
         public static bool IsAddr(string str)
@@ -146,13 +160,67 @@ namespace Squirrel_trace_viewer
         }
     }
 
-    class BoringObject : AObject
+    class JsonObject : AObject
     {
-        public BoringObject(UInt32 addr, JToken obj)
+        Dictionary<string, AElement> elems;
+        string ObjectType;
+
+        public JsonObject(JToken obj, Dictionary<UInt32, AElement> objects)
         {
-            address = addr;
+            elems = new Dictionary<string, AElement>();
+            foreach (var it in (JObject)obj)
+            {
+                if (it.Key == "ObjectType")
+                    ObjectType = (string)it.Value;
+                else
+                    elems[it.Key] = AElement.Create(it.Value, objects);
+            }
         }
 
-        public override string Description => "0x" + address.ToString("X");
+        public override string Description => "{...}";
+
+        public override void AddChildsToTree(ItemCollection items, List<AElement> stack)
+        {
+            if (stack.Contains(this))
+                return;
+            stack.Add(this);
+            foreach (var it in elems)
+            {
+                TreeViewItem item = new TreeViewItem() { Header = it.Key };
+                it.Value.AddChildsToTree(item.Items, stack);
+                items.Add(item);
+            }
+            stack.Remove(this);
+        }
+    }
+
+    class JsonArray : AObject
+    {
+        List<AElement> elems;
+
+        public JsonArray(JToken obj, Dictionary<UInt32, AElement> objects)
+        {
+            elems = new List<AElement>();
+            foreach (var it in (JArray)obj)
+            {
+                elems.Add(AElement.Create(it, objects));
+            }
+        }
+
+        public override string Description => "[...]";
+
+        public override void AddChildsToTree(ItemCollection items, List<AElement> stack)
+        {
+            if (stack.Contains(this))
+                return;
+            stack.Add(this);
+            foreach (AElement it in elems)
+            {
+                TreeViewItem item = new TreeViewItem() { Header = it.GetTreeLabel() };
+                it.AddChildsToTree(item.Items, stack);
+                items.Add(item);
+            }
+            stack.Remove(this);
+        }
     }
 }

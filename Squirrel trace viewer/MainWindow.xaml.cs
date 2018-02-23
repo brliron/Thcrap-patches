@@ -96,12 +96,28 @@ namespace Squirrel_trace_viewer
                 else if ((string)it["type"] == "object")
                 {
                     UInt32 addr = AObject.StrToAddr((string)it["address"]);
-                    objects[addr] = new BoringObject(addr, it["content"]);
+                    JToken content = it["content"];
+                    if (content != null)
+                        objects[addr] = AElement.Create(content, objects);
+                    else
+                    {
+                        //Console.WriteLine("Invalid object " + addr + ": content is null.");
+                        objects[addr] = new Null();
+                    }
                 }
             }
 
             grid.ItemsSource = list;
             return true;
+        }
+
+        private void Label_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            AElement obj = (sender as Label).DataContext as AElement;
+            tree.Items.Clear();
+            TreeViewItem item = new TreeViewItem() { Header = obj.GetTreeLabel() };
+            obj.AddChildsToTree(item.Items, new List<AElement>());
+            tree.Items.Add(item);
         }
     }
 }
