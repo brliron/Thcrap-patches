@@ -47,7 +47,7 @@ private:
 	json_t *json;
 
 	void map();
-	void free();
+	void release();
 
 public:
 	ObjectDump();

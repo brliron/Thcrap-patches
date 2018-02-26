@@ -18,17 +18,18 @@ ObjectDump::ObjectDump(const void *mem_dump, size_t size, json_t *json)
 
 ObjectDump& ObjectDump::operator=(const ObjectDump& other)
 {
-	this->free();
+	this->release();
 	DuplicateHandle(GetCurrentProcess(), other.hMap, GetCurrentProcess(), &this->hMap, 0, FALSE, DUPLICATE_SAME_ACCESS);
 	this->pointer = nullptr;
 	this->size = other.size;
 	this->json = other.json;
 	json_incref(this->json);
+	return *this;
 }
 
 ObjectDump::~ObjectDump()
 {
-	this->free();
+	this->release();
 }
 
 ObjectDump::operator bool()
@@ -38,7 +39,7 @@ ObjectDump::operator bool()
 
 void ObjectDump::set(const void *mem_dump, size_t size, json_t *json)
 {
-	this->free();
+	this->release();
 	this->hMap = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, size, nullptr);
 	if (this->hMap == nullptr) {
 		log_mboxf("Error", MB_OK, "CreateFileMapping failed with error code %d", GetLastError());
@@ -53,7 +54,7 @@ void ObjectDump::set(const void *mem_dump, size_t size, json_t *json)
 	json_incref(this->json);
 }
 
-void ObjectDump::free()
+void ObjectDump::release()
 {
 	this->unmap();
 	if (this->hMap) {
