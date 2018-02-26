@@ -17,10 +17,13 @@ namespace Squirrel_trace_viewer
 
         public virtual string GetTreeLabel() => this.Description();
 
-        public virtual void AddChildsToTree(ItemCollection items, List<AElement> stack)
+        public virtual void AddChildsToTree(ItemCollection items)
         { }
 
-        public static AElement Create(JToken obj, Dictionary<UInt32, JToken> objects)
+        public virtual void Load(Dictionary<UInt32, AElement> objects)
+        { }
+
+        public static AElement Create(JToken obj)
         {
             switch (obj.Type)
             {
@@ -38,15 +41,15 @@ namespace Squirrel_trace_viewer
 
                 case JTokenType.String:
                     if (AObject.IsAddr((string)obj))
-                        return new Reference(obj, objects);
+                        return new Reference(obj);
                     else
                         return new String(obj);
 
                 case JTokenType.Object:
-                    return new JsonObject(obj, objects);
+                    return new JsonObject(obj);
 
                 case JTokenType.Array:
-                    return new JsonArray(obj, objects);
+                    return new JsonArray(obj);
 
                 default:
                     return new String(obj.ToString());
@@ -62,21 +65,30 @@ namespace Squirrel_trace_viewer
         public AElement arg2 { get; }
         public AElement arg3 { get; }
 
-        public Instruction(JObject obj, Dictionary<UInt32, JToken> objects)
+        public Instruction(JObject obj)
         {
             op = (string)obj["op"];
-            arg0 = AElement.Create(obj["arg0"], objects);
-            arg1 = AElement.Create(obj["arg1"], objects);
-            arg2 = AElement.Create(obj["arg2"], objects);
-            arg3 = AElement.Create(obj["arg3"], objects);
+            arg0 = AElement.Create(obj["arg0"]);
+            arg1 = AElement.Create(obj["arg1"]);
+            arg2 = AElement.Create(obj["arg2"]);
+            arg3 = AElement.Create(obj["arg3"]);
         }
 
         public override string Description() => null;
+
+        public override void Load(Dictionary<UInt32, AElement> objects)
+        {
+            arg0.Load(objects);
+            arg1.Load(objects);
+            arg2.Load(objects);
+            arg3.Load(objects);
+        }
     }
 
     class Null : AElement
     {
-        public Null() {}
+        public Null()
+        { }
 
         public override string Description() => "null";
     }
@@ -149,75 +161,88 @@ namespace Squirrel_trace_viewer
 
     class JsonObject : AObject
     {
-        Dictionary<string, AElement> elems;
+        Dictionary<AElement, AElement> elems;
         string ObjectType;
 
-        public JsonObject(JToken obj, Dictionary<UInt32, JToken> objects)
+        public JsonObject(JToken obj)
         {
-            elems = new Dictionary<string, AElement>();
+            elems = new Dictionary<AElement, AElement>();
             foreach (var it in (JObject)obj)
             {
                 if (it.Key == "ObjectType")
                     ObjectType = (string)it.Value;
                 else
-                    elems[it.Key] = AElement.Create(it.Value, objects);
+                    elems[AElement.Create(it.Key)] = AElement.Create(it.Value);
             }
         }
 
         public override string Description() => "{...}";
 
-        public override void AddChildsToTree(ItemCollection items, List<AElement> stack)
+        public override void Load(Dictionary<UInt32, AElement> objects)
         {
-            if (stack.Contains(this))
-                return;
-            stack.Add(this);
+            foreach (var it in elems)
+            {
+                it.Key.Load(objects);
+                it.Value.Load(objects);
+            }
+        }
+
+        public override void AddChildsToTree(ItemCollection items)
+        {
             foreach (var it in elems)
             {
                 TreeViewItem item = new TreeViewItem() { Header = it.Key };
-                it.Value.AddChildsToTree(item.Items, stack);
+                // TODO: try it.Key.AddChildsToTree(), create a new node if it added elements
+                it.Value.AddChildsToTree(item.Items);
                 items.Add(item);
             }
-            stack.Remove(this);
         }
     }
 
     class Reference : AObject
     {
-        static List<AElement> stack = new List<AElement>();
-
-        JToken token;
+        UInt32 addr;
         AElement target;
+        bool isRecursing;
 
-        public Reference(JToken obj, Dictionary<UInt32, JToken> objects)
+        public Reference(JToken obj)
         {
-            UInt32 addr = AObject.StrToAddr((string)obj);
-            if (objects.TryGetValue(addr, out token) == false)
-                target = AObject.Create(token, objects);
-            else
-            {
-                Console.WriteLine("Unknown object at address " + addr);
-                token = null;
-            }
+            addr = AObject.StrToAddr((string)obj);
             target = null;
+            isRecursing = false;
         }
 
-        private void Load()
+        public override void Load(Dictionary<UInt32, AElement> objects)
         {
             if (target != null)
                 return;
+
+            if (objects.TryGetValue(addr, out target) == false)
+            {
+                Console.WriteLine("Unknown object at address " + addr);
+                target = null;
+            }
         }
 
         public override string Description()
         {
+            if (target == null)
+                return "<ref not loaded>";
             return target.Description();
         }
 
-        public override void AddChildsToTree(ItemCollection items, List<AElement> stack)
+        public override void AddChildsToTree(ItemCollection items)
         {
-            if (stack.Contains(this))
+            if (target == null)
+            {
+                items.Add(new TreeViewItem() { Header = "<ref not loaded>" });
                 return;
-            target.AddChildsToTree(items, stack);
-            stack.Remove(this);
+            }
+            if (isRecursing)
+                return; // Infinite recursion
+            isRecursing = true;
+            target.AddChildsToTree(items);
+            isRecursing = false;
         }
     }
 
@@ -225,29 +250,31 @@ namespace Squirrel_trace_viewer
     {
         List<AElement> elems;
 
-        public JsonArray(JToken obj, Dictionary<UInt32, JToken> objects)
+        public JsonArray(JToken obj)
         {
             elems = new List<AElement>();
             foreach (var it in (JArray)obj)
             {
-                elems.Add(AElement.Create(it, objects));
+                elems.Add(AElement.Create(it));
             }
         }
 
         public override string Description() => "[...]";
 
-        public override void AddChildsToTree(ItemCollection items, List<AElement> stack)
+        public override void Load(Dictionary<UInt32, AElement> objects)
         {
-            if (stack.Contains(this))
-                return;
-            stack.Add(this);
+            foreach (AElement it in elems)
+                it.Load(objects);
+        }
+
+        public override void AddChildsToTree(ItemCollection items)
+        {
             foreach (AElement it in elems)
             {
                 TreeViewItem item = new TreeViewItem() { Header = it.GetTreeLabel() };
-                it.AddChildsToTree(item.Items, stack);
+                it.AddChildsToTree(item.Items);
                 items.Add(item);
             }
-            stack.Remove(this);
         }
     }
 }

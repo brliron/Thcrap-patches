@@ -5,12 +5,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Squirrel_trace_viewer"
         mc:Ignorable="d"
-        Title="MainWindow" Height="350" Width="525">
+        Title="MainWindow" Width="900" Height="600">
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_Open..." Click="Load_json" />
         </Menu>
-        <TreeView Name="tree" DockPanel.Dock="Right" Width="100px" />
+        <TreeView Name="tree" DockPanel.Dock="Right" Width="200px" />
         <DataGrid Name="grid" SelectionUnit="Cell" CanUserSortColumns="False" AutoGenerateColumns="False">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="op" Binding="{Binding op}" />

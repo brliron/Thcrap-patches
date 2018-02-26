@@ -86,19 +86,21 @@ namespace Squirrel_trace_viewer
 
             JArray root = (JArray)rootToken;
             List<Instruction> list = new List<Instruction>();
-            Dictionary<UInt32, JToken> objects = new Dictionary<uint, JToken>();
+            Dictionary<UInt32, AElement> objects = new Dictionary<uint, AElement>();
             foreach (JObject it in root)
             {
                 if ((string)it["type"] == "instruction")
                 {
-                    list.Add(new Instruction(it, objects));
+                    Instruction instruction = new Instruction(it);
+                    instruction.Load(objects);
+                    list.Add(instruction);
                 }
                 else if ((string)it["type"] == "object")
                 {
                     UInt32 addr = AObject.StrToAddr((string)it["address"]);
                     JToken content = it["content"];
                     if (content != null)
-                        objects[addr] = AElement.Create(content, objects);
+                        objects[addr] = AElement.Create(content);
                     else
                     {
                         //Console.WriteLine("Invalid object " + addr + ": content is null.");
@@ -116,7 +118,7 @@ namespace Squirrel_trace_viewer
             AElement obj = (sender as Label).DataContext as AElement;
             tree.Items.Clear();
             TreeViewItem item = new TreeViewItem() { Header = obj.GetTreeLabel() };
-            obj.AddChildsToTree(item.Items, new List<AElement>());
+            obj.AddChildsToTree(item.Items);
             tree.Items.Add(item);
         }
     }
