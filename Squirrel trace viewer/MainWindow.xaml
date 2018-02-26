@@ -6,12 +6,20 @@
         xmlns:local="clr-namespace:Squirrel_trace_viewer"
         mc:Ignorable="d"
         Title="MainWindow" Width="900" Height="600">
-    <DockPanel>
-        <Menu DockPanel.Dock="Top">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="3*" />
+            <ColumnDefinition Width="5" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Menu Grid.Row="0" Grid.ColumnSpan="3" DockPanel.Dock="Top">
             <MenuItem Header="_Open..." Click="Load_json" />
         </Menu>
-        <TreeView Name="tree" DockPanel.Dock="Right" Width="200px" />
-        <DataGrid Name="grid" SelectionUnit="Cell" CanUserSortColumns="False" AutoGenerateColumns="False">
+        <DataGrid Grid.Row="1" Grid.Column="0" Name="grid" SelectionUnit="Cell" CanUserSortColumns="False" AutoGenerateColumns="False">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="op" Binding="{Binding op}" />
                 <DataGridTemplateColumn Header="arg0"><DataGridTemplateColumn.CellTemplate><DataTemplate>
@@ -28,5 +36,7 @@
                 </DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
-    </DockPanel>
+        <GridSplitter Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch" />
+        <TreeView Grid.Row="2" Grid.Column="2" Name="tree" DockPanel.Dock="Right" />
+    </Grid>
 </Window>
