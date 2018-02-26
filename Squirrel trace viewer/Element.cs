@@ -217,7 +217,9 @@ namespace Squirrel_trace_viewer
             if (target != null)
                 return;
 
-            if (objects.TryGetValue(addr, out target) == false)
+            if (objects.TryGetValue(addr, out target))
+                target.Load(objects);
+            else
             {
                 Console.WriteLine("Unknown object at address " + addr);
                 target = null;
