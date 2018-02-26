@@ -167,6 +167,7 @@ namespace Squirrel_trace_viewer
         public JsonObject(JToken obj)
         {
             elems = new Dictionary<AElement, AElement>();
+            ObjectType = "Unknown type";
             foreach (var it in (JObject)obj)
             {
                 if (it.Key == "ObjectType")
@@ -186,6 +187,8 @@ namespace Squirrel_trace_viewer
                 it.Value.Load(objects);
             }
         }
+
+        public override string GetTreeLabel() => this.ObjectType;
 
         public override void AddChildsToTree(ItemCollection items)
         {
@@ -233,7 +236,14 @@ namespace Squirrel_trace_viewer
             return target.Description();
         }
 
-        public override void AddChildsToTree(ItemCollection items)
+        public override string GetTreeLabel()
+        {
+            if (target == null)
+                return "<ref not loaded>";
+            return target.GetTreeLabel();
+        }
+
+    public override void AddChildsToTree(ItemCollection items)
         {
             if (target == null)
             {
@@ -268,6 +278,8 @@ namespace Squirrel_trace_viewer
             foreach (AElement it in elems)
                 it.Load(objects);
         }
+
+        public override string GetTreeLabel() => "Array";
 
         public override void AddChildsToTree(ItemCollection items)
         {
