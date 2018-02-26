@@ -86,7 +86,7 @@ namespace Squirrel_trace_viewer
 
             JArray root = (JArray)rootToken;
             List<Instruction> list = new List<Instruction>();
-            Dictionary<UInt32, AElement> objects = new Dictionary<uint, AElement>();
+            Dictionary<UInt32, JToken> objects = new Dictionary<uint, JToken>();
             foreach (JObject it in root)
             {
                 if ((string)it["type"] == "instruction")

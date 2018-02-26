@@ -11,19 +11,16 @@ namespace Squirrel_trace_viewer
 {
     public abstract class AElement
     {
-        public abstract string Description { get; }
+        public abstract string Description();
 
-        public override string ToString() { return Description; }
+        public override string ToString() { return Description(); }
 
-        public virtual string GetTreeLabel()
-        {
-            return this.Description;
-        }
+        public virtual string GetTreeLabel() => this.Description();
 
         public virtual void AddChildsToTree(ItemCollection items, List<AElement> stack)
         { }
 
-        public static AElement Create(JToken obj, Dictionary<UInt32, AElement> objects)
+        public static AElement Create(JToken obj, Dictionary<UInt32, JToken> objects)
         {
             switch (obj.Type)
             {
@@ -41,17 +38,7 @@ namespace Squirrel_trace_viewer
 
                 case JTokenType.String:
                     if (AObject.IsAddr((string)obj))
-                    {
-                        UInt32 addr = AObject.StrToAddr((string)obj);
-                        AElement elem;
-                        if (objects.TryGetValue(addr, out elem))
-                            return elem;
-                        else
-                        {
-                            Console.WriteLine("Unknown object at address " + addr);
-                            return null;
-                        }
-                    }
+                        return new Reference(obj, objects);
                     else
                         return new String(obj);
 
@@ -75,7 +62,7 @@ namespace Squirrel_trace_viewer
         public AElement arg2 { get; }
         public AElement arg3 { get; }
 
-        public Instruction(JObject obj, Dictionary<UInt32, AElement> objects)
+        public Instruction(JObject obj, Dictionary<UInt32, JToken> objects)
         {
             op = (string)obj["op"];
             arg0 = AElement.Create(obj["arg0"], objects);
@@ -84,14 +71,14 @@ namespace Squirrel_trace_viewer
             arg3 = AElement.Create(obj["arg3"], objects);
         }
 
-        public override string Description => null;
+        public override string Description() => null;
     }
 
     class Null : AElement
     {
         public Null() {}
 
-        public override string Description => "null";
+        public override string Description() => "null";
     }
 
     class Boolean : AElement
@@ -103,7 +90,7 @@ namespace Squirrel_trace_viewer
             value = (bool)obj;
         }
 
-        public override string Description => value.ToString();
+        public override string Description() => value.ToString();
     }
 
     class Integer : AElement
@@ -115,7 +102,7 @@ namespace Squirrel_trace_viewer
             value = (long)obj;
         }
 
-        public override string Description => value.ToString();
+        public override string Description() => value.ToString();
     }
 
     class Float : AElement
@@ -127,7 +114,7 @@ namespace Squirrel_trace_viewer
             value = (float)obj;
         }
 
-        public override string Description => value.ToString();
+        public override string Description() => value.ToString();
     }
 
     class String : AElement
@@ -139,7 +126,7 @@ namespace Squirrel_trace_viewer
             value = (string)obj;
         }
 
-        public override string Description => '"' + value + '"';
+        public override string Description() => '"' + value + '"';
     }
 
     abstract class AObject : AElement
@@ -165,7 +152,7 @@ namespace Squirrel_trace_viewer
         Dictionary<string, AElement> elems;
         string ObjectType;
 
-        public JsonObject(JToken obj, Dictionary<UInt32, AElement> objects)
+        public JsonObject(JToken obj, Dictionary<UInt32, JToken> objects)
         {
             elems = new Dictionary<string, AElement>();
             foreach (var it in (JObject)obj)
@@ -177,7 +164,7 @@ namespace Squirrel_trace_viewer
             }
         }
 
-        public override string Description => "{...}";
+        public override string Description() => "{...}";
 
         public override void AddChildsToTree(ItemCollection items, List<AElement> stack)
         {
@@ -194,11 +181,51 @@ namespace Squirrel_trace_viewer
         }
     }
 
+    class Reference : AObject
+    {
+        static List<AElement> stack = new List<AElement>();
+
+        JToken token;
+        AElement target;
+
+        public Reference(JToken obj, Dictionary<UInt32, JToken> objects)
+        {
+            UInt32 addr = AObject.StrToAddr((string)obj);
+            if (objects.TryGetValue(addr, out token) == false)
+                target = AObject.Create(token, objects);
+            else
+            {
+                Console.WriteLine("Unknown object at address " + addr);
+                token = null;
+            }
+            target = null;
+        }
+
+        private void Load()
+        {
+            if (target != null)
+                return;
+        }
+
+        public override string Description()
+        {
+            return target.Description();
+        }
+
+        public override void AddChildsToTree(ItemCollection items, List<AElement> stack)
+        {
+            if (stack.Contains(this))
+                return;
+            target.AddChildsToTree(items, stack);
+            stack.Remove(this);
+        }
+    }
+
     class JsonArray : AObject
     {
         List<AElement> elems;
 
-        public JsonArray(JToken obj, Dictionary<UInt32, AElement> objects)
+        public JsonArray(JToken obj, Dictionary<UInt32, JToken> objects)
         {
             elems = new List<AElement>();
             foreach (var it in (JArray)obj)
@@ -207,7 +234,7 @@ namespace Squirrel_trace_viewer
             }
         }
 
-        public override string Description => "[...]";
+        public override string Description() => "[...]";
 
         public override void AddChildsToTree(ItemCollection items, List<AElement> stack)
         {
