@@ -120,6 +120,51 @@ namespace Squirrel_trace_viewer
             TreeViewItem item = new TreeViewItem() { Header = obj.GetTreeLabel() };
             obj.AddChildsToTree(item.Items);
             tree.Items.Add(item);
+            ExpandAll(item);
         }
+
+        private void TreeViewItem_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            (e.Source as TreeViewItem).Focus();
+        }
+
+        private void ExpandAll(TreeViewItem item)
+        {
+            if (item == null)
+                return;
+            item.IsExpanded = true;
+            foreach (var it in item.Items)
+                ExpandAll(it as TreeViewItem);
+        }
+
+        private void CollapseAll(TreeViewItem item)
+        {
+            if (item == null)
+                return;
+            foreach (var it in item.Items)
+                CollapseAll(it as TreeViewItem);
+            item.IsExpanded = false;
+        }
+
+        private void Generic_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = true;
+        }
+
+        private void CollapseAll_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            CollapseAll(e.Source as TreeViewItem);
+        }
+
+        private void ExpandAll_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            ExpandAll(e.Source as TreeViewItem);
+        }
+    }
+
+    public static class CustomCommands
+    {
+        public static readonly RoutedUICommand ExpandAll = new RoutedUICommand("Expand all", "ExpandAll", typeof(CustomCommands));
+        public static readonly RoutedUICommand CollapseAll = new RoutedUICommand("Collapse all", "CollapseAll", typeof(CustomCommands));
     }
 }

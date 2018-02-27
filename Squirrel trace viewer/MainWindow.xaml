@@ -6,6 +6,10 @@
         xmlns:local="clr-namespace:Squirrel_trace_viewer"
         mc:Ignorable="d"
         Title="MainWindow" Width="900" Height="600">
+    <Window.CommandBindings>
+        <CommandBinding Command="local:CustomCommands.CollapseAll" CanExecute="Generic_CanExecute" Executed="CollapseAll_Executed" />
+        <CommandBinding Command="local:CustomCommands.ExpandAll" CanExecute="Generic_CanExecute" Executed="ExpandAll_Executed" />
+    </Window.CommandBindings>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -37,6 +41,20 @@
             </DataGrid.Columns>
         </DataGrid>
         <GridSplitter Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch" />
-        <TreeView Grid.Row="2" Grid.Column="2" Name="tree" DockPanel.Dock="Right" />
+        <TreeView Grid.Row="2" Grid.Column="2" Name="tree" DockPanel.Dock="Right">
+            <TreeView.ItemContainerStyle>
+                <Style TargetType="{x:Type TreeViewItem}">
+                    <EventSetter Event="MouseRightButtonUp" Handler="TreeViewItem_MouseRightButtonUp" />
+                    <Setter Property="ContextMenu">
+                        <Setter.Value>
+                            <ContextMenu >
+                                <MenuItem Command="local:CustomCommands.CollapseAll" />
+                                <MenuItem Command="local:CustomCommands.ExpandAll" />
+                            </ContextMenu>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </TreeView.ItemContainerStyle>
+        </TreeView>
     </Grid>
 </Window>
