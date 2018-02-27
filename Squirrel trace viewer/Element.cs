@@ -83,6 +83,21 @@ namespace Squirrel_trace_viewer
             arg2.Load(objects);
             arg3.Load(objects);
         }
+
+        private void AddArgToTree(string name, AElement elem, ItemCollection items)
+        {
+            TreeViewItem item = new TreeViewItem() { Header = name + ": " + elem.GetTreeLabel() };
+            elem.AddChildsToTree(item.Items);
+            items.Add(item);
+        }
+        public override void AddChildsToTree(ItemCollection items)
+        {
+            items.Add(new TreeViewItem() { Header = "op: " + op });
+            AddArgToTree("arg0", arg0, items);
+            AddArgToTree("arg1", arg1, items);
+            AddArgToTree("arg2", arg2, items);
+            AddArgToTree("arg3", arg3, items);
+        }
     }
 
     class Null : AElement

@@ -23,23 +23,7 @@
         <Menu Grid.Row="0" Grid.ColumnSpan="3" DockPanel.Dock="Top">
             <MenuItem Header="_Open..." Click="Load_json" />
         </Menu>
-        <DataGrid Grid.Row="1" Grid.Column="0" Name="grid" SelectionUnit="Cell" CanUserSortColumns="False" AutoGenerateColumns="False">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="op" Binding="{Binding op}" />
-                <DataGridTemplateColumn Header="arg0"><DataGridTemplateColumn.CellTemplate><DataTemplate>
-                    <Label DataContext="{Binding arg0}" Content="{Binding}" MouseUp="Label_MouseUp" />
-                </DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="arg1"><DataGridTemplateColumn.CellTemplate><DataTemplate>
-                    <Label DataContext="{Binding arg1}" Content="{Binding}" MouseUp="Label_MouseUp" />
-                </DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="arg2"><DataGridTemplateColumn.CellTemplate><DataTemplate>
-                    <Label DataContext="{Binding arg2}" Content="{Binding}" MouseUp="Label_MouseUp" />
-                </DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="arg3"><DataGridTemplateColumn.CellTemplate><DataTemplate>
-                    <Label DataContext="{Binding arg3}" Content="{Binding}" MouseUp="Label_MouseUp" />
-                </DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
-            </DataGrid.Columns>
-        </DataGrid>
+        <DataGrid Grid.Row="1" Grid.Column="0" Name="grid" CanUserSortColumns="False" SelectedCellsChanged="grid_SelectedCellsChanged" />
         <GridSplitter Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch" />
         <TreeView Grid.Row="2" Grid.Column="2" Name="tree" DockPanel.Dock="Right">
             <TreeView.ItemContainerStyle>

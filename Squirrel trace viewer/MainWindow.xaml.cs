@@ -113,14 +113,15 @@ namespace Squirrel_trace_viewer
             return true;
         }
 
-        private void Label_MouseUp(object sender, MouseButtonEventArgs e)
+        private void grid_SelectedCellsChanged(object sender, SelectedCellsChangedEventArgs e)
         {
-            AElement obj = (sender as Label).DataContext as AElement;
+            AElement obj = grid.SelectedItem as AElement;
+            if (obj == null)
+                return;
             tree.Items.Clear();
-            TreeViewItem item = new TreeViewItem() { Header = obj.GetTreeLabel() };
-            obj.AddChildsToTree(item.Items);
-            tree.Items.Add(item);
-            ExpandAll(item);
+            obj.AddChildsToTree(tree.Items);
+            foreach (var it in tree.Items)
+                ExpandAll(it as TreeViewItem);
         }
 
         private void TreeViewItem_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
