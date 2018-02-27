@@ -195,8 +195,9 @@ namespace Squirrel_trace_viewer
             foreach (var it in elems)
             {
                 TreeViewItem item = new TreeViewItem() { Header = it.Key };
-                // TODO: try it.Key.AddChildsToTree(), create a new node if it added elements
                 it.Value.AddChildsToTree(item.Items);
+                if (item.Items.Count == 0)
+                    item.Header += ": " + it.Value.Description();
                 items.Add(item);
             }
         }
@@ -283,11 +284,15 @@ namespace Squirrel_trace_viewer
 
         public override void AddChildsToTree(ItemCollection items)
         {
+            int i = 0;
             foreach (AElement it in elems)
             {
                 TreeViewItem item = new TreeViewItem() { Header = it.GetTreeLabel() };
+                if ((string)item.Header == "Unknown type")
+                    item.Header = i;
                 it.AddChildsToTree(item.Items);
                 items.Add(item);
+                i++;
             }
         }
     }
