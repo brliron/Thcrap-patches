@@ -108,7 +108,6 @@ static json_t *arg_to_json(SQVM *self, FILE *file, ArgType type, uint32_t arg)
 
 	case ARG_STACK:
 		return add_obj(file, &self->_stack._vals[self->_stackbase + arg]);
-		break;
 
 	case ARG_LITERAL:
 		return add_obj(file, &self->ci->_literals[arg]);
@@ -173,6 +172,102 @@ static json_t *arg_to_json(SQVM *self, FILE *file, ArgType type, uint32_t arg)
 	}
 }
 
+static json_t *instruction_to_json(SQVM *self, FILE *file, SQInstruction *_i_)
+{
+	OpcodeDescriptor *desc = &opcodes[_i_->op];
+	json_t *instruction = json_object();
+
+	json_object_set_new(instruction, "type", json_string("instruction"));
+	json_object_set_new(instruction, "op", json_string(desc->name));
+
+	switch (_i_->op) {
+	case _OP_TAILCALL:
+	case _OP_CALL: {
+		json_object_set_new(instruction, "arg0", arg_to_json(self, file, desc->arg0, _i_->_arg0));
+		json_object_set_new(instruction, "arg1", arg_to_json(self, file, desc->arg1, _i_->_arg1));
+		json_t *callstack = json_array();
+		for (int i = _i_->_arg2; i < _i_->_arg2 + _i_->_arg3; i++)
+			json_array_append(callstack, add_obj(file, &self->_stack._vals[self->_stackbase + i]));
+		json_object_set_new(instruction, "arg2", callstack);
+		json_object_set_new(instruction, "arg3", json_null());
+		break;
+	}
+
+	case _OP_EQ:
+	case _OP_NE:
+		json_object_set_new(instruction, "arg0", arg_to_json(self, file, desc->arg0, _i_->_arg0));
+		if (_i_->_arg3) {
+			json_object_set_new(instruction, "arg1", add_obj(file, &self->ci->_literals[_i_->_arg1]));
+		}
+		else {
+			json_object_set_new(instruction, "arg1", add_obj(file, &self->_stack._vals[self->_stackbase + _i_->_arg1]));
+		}
+		json_object_set_new(instruction, "arg2", arg_to_json(self, file, desc->arg2, _i_->_arg2));
+		json_object_set_new(instruction, "arg3", json_null());
+		break;
+
+	case _OP_RETURN:
+	case _OP_YIELD:
+		json_object_set_new(instruction, "arg0", arg_to_json(self, file, desc->arg0, _i_->_arg0));
+		if (_i_->_arg0 != 0xFF) {
+			json_object_set_new(instruction, "arg1", add_obj(file, &self->_stack._vals[self->_stackbase + _i_->_arg1]));
+		}
+		else {
+			json_object_set_new(instruction, "arg1", json_null());
+		}
+		json_object_set_new(instruction, "arg2", arg_to_json(self, file, desc->arg2, _i_->_arg2));
+		json_object_set_new(instruction, "arg3", arg_to_json(self, file, desc->arg3, _i_->_arg3));
+		break;
+
+	case _OP_GETOUTER:
+	case _OP_SETOUTER:
+		json_object_set_new(instruction, "arg0", arg_to_json(self, file, desc->arg0, _i_->_arg0));
+		json_object_set_new(instruction, "arg1", add_obj(file, &self->ci->_closure._unVal.pClosure->_outervalues[_i_->_arg1]));
+		json_object_set_new(instruction, "arg2", arg_to_json(self, file, desc->arg2, _i_->_arg2));
+		json_object_set_new(instruction, "arg3", arg_to_json(self, file, desc->arg3, _i_->_arg3));
+		break;
+
+	/**
+	  * OP_CLOSURE will often be called with self->ci (or an object in it) being garbage.
+	  * Even with all these NULL checks, if self->ci is 0x00000003 (it happened), well... I can't do anything but crash.
+	  * So I'll just fallback to the default case that says "arg1 is an integer".
+
+	case _OP_CLOSURE: {
+		json_object_set_new(instruction, "arg0", arg_to_json(self, file, desc->arg0, _i_->_arg0));
+		SQObjectPtr *functions = nullptr;
+		if (self->ci) {
+			if (self->ci->_closure._type == OT_CLOSURE) {
+				SQClosure *closure = self->ci->_closure._unVal.pClosure;
+				if (closure->_function) {
+					functions = closure->_function->_functions;
+				}
+			}
+		}
+		if (functions) {
+			json_object_set_new(instruction, "arg1", add_obj(file, &functions[_i_->_arg1]));
+		}
+		else {
+			json_object_set_new(instruction, "arg2", json_string("<null>"));
+		}
+		json_object_set_new(instruction, "arg2", arg_to_json(self, file, desc->arg2, _i_->_arg2));
+		json_object_set_new(instruction, "arg3", arg_to_json(self, file, desc->arg3, _i_->_arg3));
+		break;
+	}
+	*/
+
+	// TODO: _OP_NEWOBJ, _OP_APPENDARRAY, _OP_COMPARITH
+
+	default:
+		json_object_set_new(instruction, "arg0", arg_to_json(self, file, desc->arg0, _i_->_arg0));
+		json_object_set_new(instruction, "arg1", arg_to_json(self, file, desc->arg1, _i_->_arg1));
+		json_object_set_new(instruction, "arg2", arg_to_json(self, file, desc->arg2, _i_->_arg2));
+		json_object_set_new(instruction, "arg3", arg_to_json(self, file, desc->arg3, _i_->_arg3));
+		break;
+	}
+
+	return instruction;
+}
+
 ObjectDumpCollection *objs_list = nullptr;
 
 /**
@@ -196,20 +291,11 @@ extern "C" int BP_SQVM_execute_switch(x86_reg_t *regs, json_t *bp_info)
 		objs_list = new ObjectDumpCollection();
 	}
 	EnterCriticalSection(&cs);
-	OpcodeDescriptor *desc = &opcodes[_i_->op];
 
-	json_t *instruction = json_object();
-	json_object_set_new(instruction, "type", json_string("instruction"));
-	json_object_set_new(instruction, "op",     json_string(desc->name));
-	json_object_set_new(instruction, "arg0",   arg_to_json(self, file, desc->arg0, _i_->_arg0));
-	json_object_set_new(instruction, "arg1",   arg_to_json(self, file, desc->arg1, _i_->_arg1));
-	json_object_set_new(instruction, "arg2",   arg_to_json(self, file, desc->arg2, _i_->_arg2));
-	json_object_set_new(instruction, "arg3",   arg_to_json(self, file, desc->arg3, _i_->_arg3));
-
+	json_t *instruction = instruction_to_json(self, file, _i_);
 	json_dumpf(instruction, file, JSON_COMPACT);
 	fwrite(",\n", 2, 1, file);
 	fflush(file);
-
 	json_decref(instruction);
 
 	objs_list->unmapAll();
