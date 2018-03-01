@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,6 +12,8 @@ namespace Squirrel_trace_viewer
 {
     public abstract class AElement
     {
+        public abstract JTokenType Type { get; }
+
         public abstract string Description();
 
         public override string ToString() { return Description(); }
@@ -19,6 +22,13 @@ namespace Squirrel_trace_viewer
 
         public virtual void AddChildsToTree(ItemCollection items)
         { }
+
+        public TreeViewItem ToTreeItem(string header)
+        {
+            TreeViewItem item = new TreeViewItem() { Header = header + ": " + this.GetTreeLabel() };
+            this.AddChildsToTree(item.Items);
+            return item;
+        }
 
         public virtual void Load(Dictionary<UInt32, AElement> objects)
         { }
@@ -46,6 +56,9 @@ namespace Squirrel_trace_viewer
                         return new String(obj);
 
                 case JTokenType.Object:
+                    JToken objectType = obj["ObjectType"];
+                    if (objectType != null && objectType.Type == JTokenType.String && (string)objectType == "SQTable")
+                        return new SQTable(obj);
                     return new JsonObject(obj);
 
                 case JTokenType.Array:
@@ -74,6 +87,7 @@ namespace Squirrel_trace_viewer
             arg3 = AElement.Create(obj["arg3"]);
         }
 
+        public override JTokenType Type => JTokenType.None;
         public override string Description() => null;
 
         public override void Load(Dictionary<UInt32, AElement> objects)
@@ -84,19 +98,13 @@ namespace Squirrel_trace_viewer
             arg3.Load(objects);
         }
 
-        private void AddArgToTree(string name, AElement elem, ItemCollection items)
-        {
-            TreeViewItem item = new TreeViewItem() { Header = name + ": " + elem.GetTreeLabel() };
-            elem.AddChildsToTree(item.Items);
-            items.Add(item);
-        }
         public override void AddChildsToTree(ItemCollection items)
         {
             items.Add(new TreeViewItem() { Header = "op: " + op });
-            AddArgToTree("arg0", arg0, items);
-            AddArgToTree("arg1", arg1, items);
-            AddArgToTree("arg2", arg2, items);
-            AddArgToTree("arg3", arg3, items);
+            items.Add(arg0.ToTreeItem("arg0"));
+            items.Add(arg1.ToTreeItem("arg1"));
+            items.Add(arg2.ToTreeItem("arg2"));
+            items.Add(arg3.ToTreeItem("arg3"));
         }
     }
 
@@ -105,6 +113,7 @@ namespace Squirrel_trace_viewer
         public Null()
         { }
 
+        public override JTokenType Type => JTokenType.Null;
         public override string Description() => "null";
     }
 
@@ -117,6 +126,7 @@ namespace Squirrel_trace_viewer
             value = (bool)obj;
         }
 
+        public override JTokenType Type => JTokenType.Boolean;
         public override string Description() => value.ToString();
     }
 
@@ -124,11 +134,17 @@ namespace Squirrel_trace_viewer
     {
         long value;
 
+        public Integer(long n)
+        {
+            value = n;
+        }
+
         public Integer(JToken obj)
         {
             value = (long)obj;
         }
 
+        public override JTokenType Type => JTokenType.Integer;
         public override string Description() => value.ToString();
     }
 
@@ -141,6 +157,7 @@ namespace Squirrel_trace_viewer
             value = (float)obj;
         }
 
+        public override JTokenType Type => JTokenType.Float;
         public override string Description() => value.ToString();
     }
 
@@ -153,7 +170,15 @@ namespace Squirrel_trace_viewer
             value = (string)obj;
         }
 
+        public String(string str)
+        {
+            value = str;
+        }
+
+        public override JTokenType Type => JTokenType.String;
         public override string Description() => '"' + value + '"';
+
+        public bool Compare(string other) => this.value == other;
     }
 
     abstract class AObject : AElement
@@ -176,8 +201,14 @@ namespace Squirrel_trace_viewer
 
     class JsonObject : AObject
     {
-        Dictionary<AElement, AElement> elems;
-        string ObjectType;
+        protected Dictionary<AElement, AElement> elems;
+        protected string ObjectType;
+
+        public JsonObject()
+        {
+            elems = new Dictionary<AElement, AElement>();
+            ObjectType = "Unknown type";
+        }
 
         public JsonObject(JToken obj)
         {
@@ -192,6 +223,7 @@ namespace Squirrel_trace_viewer
             }
         }
 
+        public override JTokenType Type => JTokenType.Object;
         public override string Description() => "{...}";
 
         public override void Load(Dictionary<UInt32, AElement> objects)
@@ -200,6 +232,17 @@ namespace Squirrel_trace_viewer
             {
                 it.Key.Load(objects);
                 it.Value.Load(objects);
+            }
+        }
+
+        public AElement this[string key]
+        {
+            get {
+                return this.elems.Single(x => {
+                    if (x.Key.Type != JTokenType.String)
+                        return false;
+                    return x.Key.ToString() == '"' + key + '"';
+                    }).Value;
             }
         }
 
@@ -214,6 +257,30 @@ namespace Squirrel_trace_viewer
                 if (item.Items.Count == 0)
                     item.Header += ": " + it.Value.Description();
                 items.Add(item);
+            }
+        }
+    }
+
+    class SQTable : JsonObject
+    {
+        public SQTable(JToken obj)
+            : base(obj)
+        { }
+
+        public override void AddChildsToTree(ItemCollection items)
+        {
+            JsonArray nodes = this["_nodes"] as JsonArray;
+            foreach (AElement it in nodes)
+            {
+                AElement key = (it as JsonObject)["key"];
+                AElement val = (it as JsonObject)["val"];
+                if (key.Type == JTokenType.String || key.Type == JTokenType.Null)
+                    items.Add(val.ToTreeItem(key.GetTreeLabel()));
+                else
+                {
+                    items.Add(key.ToTreeItem("key"));
+                    items.Add(val.ToTreeItem("val"));
+                }
             }
         }
     }
@@ -252,6 +319,14 @@ namespace Squirrel_trace_viewer
             return target.Description();
         }
 
+        public override JTokenType Type {
+            get {
+                if (target == null)
+                    return JTokenType.None;
+                return target.Type;
+            }
+        }
+
         public override string GetTreeLabel()
         {
             if (target == null)
@@ -259,7 +334,7 @@ namespace Squirrel_trace_viewer
             return target.GetTreeLabel();
         }
 
-    public override void AddChildsToTree(ItemCollection items)
+        public override void AddChildsToTree(ItemCollection items)
         {
             if (target == null)
             {
@@ -274,7 +349,7 @@ namespace Squirrel_trace_viewer
         }
     }
 
-    class JsonArray : AObject
+    class JsonArray : AObject, IEnumerable
     {
         List<AElement> elems;
 
@@ -287,7 +362,14 @@ namespace Squirrel_trace_viewer
             }
         }
 
+        public override JTokenType Type => JTokenType.Array;
         public override string Description() => "[...]";
+
+        public IEnumerator GetEnumerator()
+        {
+            foreach (var it in elems)
+                yield return it;
+        }
 
         public override void Load(Dictionary<UInt32, AElement> objects)
         {
