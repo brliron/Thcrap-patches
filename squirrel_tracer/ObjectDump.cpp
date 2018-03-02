@@ -114,6 +114,9 @@ ObjectDumpCollection::~ObjectDumpCollection()
 
 void ObjectDumpCollection::unmapAll()
 {
+	// TODO: unmap only mapped elements.
+	// A benchmark showed this loop slows down the process a lot.
+	// Or maybe switching to std::unordered_map will make things better?
 	for (auto& it : *this) {
 		it.second.unmap();
 	}

@@ -159,6 +159,7 @@ extern ObjectDumpCollection *objs_list;
 template<typename T>
 static json_t *add_refcounted(FILE *file, T *o)
 {
+	// TODO: use something based on std::vector to reduce allocations
 	if (!stack) {
 		stack = new std::list<void*>;
 	}
@@ -179,9 +180,9 @@ static json_t *add_refcounted(FILE *file, T *o)
 	stack->push_back(o);
 
 	ObjectDump& dump = (*objs_list)[o];
+	// TODO: create the json object only when dump.equal(o, sizeof(T)) == false
+	json_t *obj_json = obj_to_json<T>(file, o);
 	if (dump.equal(o, sizeof(T)) == false) {
-		json_t *obj_json = obj_to_json<T>(file, o);
-
 		// Even when the objects differ, if the JSON dump is identical, we don't need to replace it.
 		if (dump.equal(obj_json) == 0) {
 			dump.set(o, sizeof(T), obj_json);
@@ -195,8 +196,8 @@ static json_t *add_refcounted(FILE *file, T *o)
 			fwrite(",\n", 2, 1, file);
 			json_decref(out);
 		}
-		json_decref(obj_json);
 	}
+	json_decref(obj_json);
 
 	stack->pop_back();
 	return res;
