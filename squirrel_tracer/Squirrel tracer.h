@@ -45,6 +45,7 @@ private:
 	void *pointer;
 	size_t size;
 	json_t *json;
+	size_t json_dump_size;
 
 	void map();
 	void release();
@@ -60,6 +61,7 @@ public:
 	void set(const void *pointer, size_t size, json_t *json);
 	bool equal(const void *mem_dump, size_t size);
 	bool equal(const json_t *json);
+	void writeToFile(FILE *file);
 
 	void unmap();
 };

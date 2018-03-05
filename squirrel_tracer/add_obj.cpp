@@ -184,17 +184,9 @@ static json_t *add_refcounted(FILE *file, T *o)
 	json_t *obj_json = obj_to_json<T>(file, o);
 	if (dump.equal(o, sizeof(T)) == false) {
 		// Even when the objects differ, if the JSON dump is identical, we don't need to replace it.
-		if (dump.equal(obj_json) == 0) {
+		if (dump.equal(obj_json) == false) {
 			dump.set(o, sizeof(T), obj_json);
-
-			json_t *out = json_object();
-			json_object_set_new(out, "type", json_string("object"));
-			sprintf(string, "POINTER:%p", o);
-			json_object_set_new(out, "address", json_string(string));
-			json_object_set(out, "content", obj_json);
-			json_dumpf(out, file, JSON_COMPACT);
-			fwrite(",\n", 2, 1, file);
-			json_decref(out);
+			dump.writeToFile(file);
 		}
 	}
 	json_decref(obj_json);
