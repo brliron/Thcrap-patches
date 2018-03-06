@@ -291,6 +291,11 @@ extern "C" int BP_SQVM_execute_switch(x86_reg_t *regs, json_t *bp_info)
 		objs_list = new ObjectDumpCollection();
 	}
 	EnterCriticalSection(&cs);
+	static void *prev_closure = 0;
+	if (self->ci->_closure._unVal.pClosure != prev_closure) {
+		log_printf("In closure %p\n", self->ci->_closure._unVal.pClosure);
+		prev_closure = self->ci->_closure._unVal.pClosure;
+	}
 
 	json_t *instruction = instruction_to_json(self, file, _i_);
 	json_dumpf(instruction, file, JSON_COMPACT);
@@ -300,6 +305,40 @@ extern "C" int BP_SQVM_execute_switch(x86_reg_t *regs, json_t *bp_info)
 
 	objs_list->unmapAll();
 	LeaveCriticalSection(&cs);
+	return 1;
+}
+
+/**
+  * sq_readclosure
+  * It doesn't make sense to put this breakpoint at the beginning of the function,
+  * SQClosure::Load must have been called.
+  * Over the call to v->Push(closure) seems a good place.
+  */
+extern "C" int BP_sq_readclosure(x86_reg_t *regs, json_t *bp_info)
+{
+	// Parameters
+	// ----------
+	SQObjectPtr *closure = (SQObjectPtr*)json_object_get_immediate(bp_info, regs, "closure");
+	// ----------
+
+	log_printf("Reading closure %p\n", closure->_unVal.pClosure);
+	return 1;
+}
+
+/**
+  * Copy of BP_th135_file_name from base_tasofro.
+  * But thcrap doesn't support multiple breakpoints functions for a single breakpoint.
+  */
+int BP_file_name_for_squirrel(x86_reg_t *regs, json_t *bp_info)
+{
+	// Parameters
+	// ----------
+	const char *filename = (const char*)json_object_get_immediate(bp_info, regs, "file_name");
+	// ----------
+
+	if (filename) {
+		log_printf("Loading %s\n", filename);
+	}
 	return 1;
 }
 

@@ -2,3 +2,5 @@ LIBRARY
 EXPORTS
 	thcrap_plugin_init	@1
 	BP_SQVM_execute_switch
+	BP_sq_readclosure
+	BP_file_name_for_squirrel
