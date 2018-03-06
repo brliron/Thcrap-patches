@@ -72,6 +72,7 @@ namespace Squirrel_trace_viewer
 
     class Instruction : AElement
     {
+        public string fn { get; }
         public string op { get; }
         public AElement arg0 { get; }
         public AElement arg1 { get; }
@@ -80,6 +81,7 @@ namespace Squirrel_trace_viewer
 
         public Instruction(JObject obj)
         {
+            fn = (string)obj["fn"];
             op = (string)obj["op"];
             arg0 = AElement.Create(obj["arg0"]);
             arg1 = AElement.Create(obj["arg1"]);
