@@ -100,17 +100,17 @@ static std::vector<OpcodeDescriptor>	opcodes = {
   { "close",		ARG_NONE,	ARG_STACK,	ARG_NONE,	ARG_NONE }
 };
 
-static json_t *arg_to_json(SQVM *self, FILE *file, ArgType type, uint32_t arg)
+json_t *SquirrelTracer::arg_to_json(ArgType type, uint32_t arg)
 {
 	switch (type) {
 	case ARG_NONE:
 		return json_null();
 
 	case ARG_STACK:
-		return add_obj(file, &self->_stack._vals[self->_stackbase + arg]);
+		return add_STK(arg);
 
 	case ARG_LITERAL:
-		return add_obj(file, &self->ci->_literals[arg]);
+		return add_obj(&this->vm->ci->_literals[arg]);
 
 	case ARG_IMMEDIATE:
 		return json_integer(arg);
@@ -172,7 +172,7 @@ static json_t *arg_to_json(SQVM *self, FILE *file, ArgType type, uint32_t arg)
 	}
 }
 
-static json_t *instruction_to_json(SQVM *self, FILE *file, SQInstruction *_i_)
+void SquirrelTracer::add_instruction(SQInstruction *_i_)
 {
 	OpcodeDescriptor *desc = &opcodes[_i_->op];
 	json_t *instruction = json_object();
@@ -183,11 +183,11 @@ static json_t *instruction_to_json(SQVM *self, FILE *file, SQInstruction *_i_)
 	switch (_i_->op) {
 	case _OP_TAILCALL:
 	case _OP_CALL: {
-		json_object_set_new(instruction, "arg0", arg_to_json(self, file, desc->arg0, _i_->_arg0));
-		json_object_set_new(instruction, "arg1", arg_to_json(self, file, desc->arg1, _i_->_arg1));
+		json_object_set_new(instruction, "arg0", arg_to_json(desc->arg0, _i_->_arg0));
+		json_object_set_new(instruction, "arg1", arg_to_json(desc->arg1, _i_->_arg1));
 		json_t *callstack = json_array();
 		for (int i = _i_->_arg2; i < _i_->_arg2 + _i_->_arg3; i++)
-			json_array_append(callstack, add_obj(file, &self->_stack._vals[self->_stackbase + i]));
+			json_array_append(callstack, add_STK(i));
 		json_object_set_new(instruction, "arg2", callstack);
 		json_object_set_new(instruction, "arg3", json_null());
 		break;
@@ -195,36 +195,36 @@ static json_t *instruction_to_json(SQVM *self, FILE *file, SQInstruction *_i_)
 
 	case _OP_EQ:
 	case _OP_NE:
-		json_object_set_new(instruction, "arg0", arg_to_json(self, file, desc->arg0, _i_->_arg0));
+		json_object_set_new(instruction, "arg0", arg_to_json(desc->arg0, _i_->_arg0));
 		if (_i_->_arg3) {
-			json_object_set_new(instruction, "arg1", add_obj(file, &self->ci->_literals[_i_->_arg1]));
+			json_object_set_new(instruction, "arg1", add_obj(&this->vm->ci->_literals[_i_->_arg1]));
 		}
 		else {
-			json_object_set_new(instruction, "arg1", add_obj(file, &self->_stack._vals[self->_stackbase + _i_->_arg1]));
+			json_object_set_new(instruction, "arg1", add_STK(_i_->_arg1));
 		}
-		json_object_set_new(instruction, "arg2", arg_to_json(self, file, desc->arg2, _i_->_arg2));
+		json_object_set_new(instruction, "arg2", arg_to_json(desc->arg2, _i_->_arg2));
 		json_object_set_new(instruction, "arg3", json_null());
 		break;
 
 	case _OP_RETURN:
 	case _OP_YIELD:
-		json_object_set_new(instruction, "arg0", arg_to_json(self, file, desc->arg0, _i_->_arg0));
+		json_object_set_new(instruction, "arg0", arg_to_json(desc->arg0, _i_->_arg0));
 		if (_i_->_arg0 != 0xFF) {
-			json_object_set_new(instruction, "arg1", add_obj(file, &self->_stack._vals[self->_stackbase + _i_->_arg1]));
+			json_object_set_new(instruction, "arg1", add_STK(_i_->_arg1));
 		}
 		else {
 			json_object_set_new(instruction, "arg1", json_null());
 		}
-		json_object_set_new(instruction, "arg2", arg_to_json(self, file, desc->arg2, _i_->_arg2));
-		json_object_set_new(instruction, "arg3", arg_to_json(self, file, desc->arg3, _i_->_arg3));
+		json_object_set_new(instruction, "arg2", arg_to_json(desc->arg2, _i_->_arg2));
+		json_object_set_new(instruction, "arg3", arg_to_json(desc->arg3, _i_->_arg3));
 		break;
 
 	case _OP_GETOUTER:
 	case _OP_SETOUTER:
-		json_object_set_new(instruction, "arg0", arg_to_json(self, file, desc->arg0, _i_->_arg0));
-		json_object_set_new(instruction, "arg1", add_obj(file, &self->ci->_closure._unVal.pClosure->_outervalues[_i_->_arg1]));
-		json_object_set_new(instruction, "arg2", arg_to_json(self, file, desc->arg2, _i_->_arg2));
-		json_object_set_new(instruction, "arg3", arg_to_json(self, file, desc->arg3, _i_->_arg3));
+		json_object_set_new(instruction, "arg0", arg_to_json(desc->arg0, _i_->_arg0));
+		json_object_set_new(instruction, "arg1", add_obj(&this->vm->ci->_closure._unVal.pClosure->_outervalues[_i_->_arg1]));
+		json_object_set_new(instruction, "arg2", arg_to_json(desc->arg2, _i_->_arg2));
+		json_object_set_new(instruction, "arg3", arg_to_json(desc->arg3, _i_->_arg3));
 		break;
 
 	/**
@@ -258,17 +258,49 @@ static json_t *instruction_to_json(SQVM *self, FILE *file, SQInstruction *_i_)
 	// TODO: _OP_NEWOBJ, _OP_APPENDARRAY, _OP_COMPARITH
 
 	default:
-		json_object_set_new(instruction, "arg0", arg_to_json(self, file, desc->arg0, _i_->_arg0));
-		json_object_set_new(instruction, "arg1", arg_to_json(self, file, desc->arg1, _i_->_arg1));
-		json_object_set_new(instruction, "arg2", arg_to_json(self, file, desc->arg2, _i_->_arg2));
-		json_object_set_new(instruction, "arg3", arg_to_json(self, file, desc->arg3, _i_->_arg3));
+		json_object_set_new(instruction, "arg0", arg_to_json(desc->arg0, _i_->_arg0));
+		json_object_set_new(instruction, "arg1", arg_to_json(desc->arg1, _i_->_arg1));
+		json_object_set_new(instruction, "arg2", arg_to_json(desc->arg2, _i_->_arg2));
+		json_object_set_new(instruction, "arg3", arg_to_json(desc->arg3, _i_->_arg3));
 		break;
 	}
 
-	return instruction;
+	json_dumpf(instruction, this->file, JSON_COMPACT);
+	fwrite(",\n", 2, 1, this->file);
+	fflush(this->file);
+	json_decref(instruction);
 }
 
-ObjectDumpCollection *objs_list = nullptr;
+SquirrelTracer::SquirrelTracer()
+	: prev_closure(0)
+{
+	InitializeCriticalSection(&this->cs);
+	this->file = fopen("trace.json", "w");
+	fwrite("[\n", 2, 1, this->file);
+}
+
+SquirrelTracer::~SquirrelTracer()
+{
+	fclose(this->file);
+	DeleteCriticalSection(&this->cs);
+}
+
+void SquirrelTracer::enter(SQVM *vm)
+{
+	EnterCriticalSection(&this->cs);
+	this->vm = vm;
+
+	if (vm->ci->_closure._unVal.pClosure != this->prev_closure) {
+		log_printf("In closure %p\n", vm->ci->_closure._unVal.pClosure);
+		this->prev_closure = vm->ci->_closure._unVal.pClosure;
+	}
+}
+
+void SquirrelTracer::leave()
+{
+	this->objs_list.unmapAll();
+	LeaveCriticalSection(&this->cs);
+}
 
 /**
   * switch instruction in SQVM::execute
@@ -278,33 +310,19 @@ extern "C" int BP_SQVM_execute_switch(x86_reg_t *regs, json_t *bp_info)
 {
 	// Parameters
 	// ----------
-	SQVM *self = (SQVM*)json_object_get_immediate(bp_info, regs, "this");
+	SQVM *vm = (SQVM*)json_object_get_immediate(bp_info, regs, "this");
 	SQInstruction *_i_ = (SQInstruction*)json_object_get_immediate(bp_info, regs, "instruction");
 	// ----------
 
-	static CRITICAL_SECTION cs;
-	static FILE *file = nullptr;
-	if (!file) {
-		file = fopen("trace.json", "w");
-		fwrite("[\n", 2, 1, file);
-		InitializeCriticalSection(&cs);
-		objs_list = new ObjectDumpCollection();
-	}
-	EnterCriticalSection(&cs);
-	static void *prev_closure = 0;
-	if (self->ci->_closure._unVal.pClosure != prev_closure) {
-		log_printf("In closure %p\n", self->ci->_closure._unVal.pClosure);
-		prev_closure = self->ci->_closure._unVal.pClosure;
+	static SquirrelTracer *tracer = nullptr;
+	if (!tracer) {
+		tracer = new SquirrelTracer();
 	}
 
-	json_t *instruction = instruction_to_json(self, file, _i_);
-	json_dumpf(instruction, file, JSON_COMPACT);
-	fwrite(",\n", 2, 1, file);
-	fflush(file);
-	json_decref(instruction);
+	tracer->enter(vm);
+	tracer->add_instruction(_i_);
+	tracer->leave();
 
-	objs_list->unmapAll();
-	LeaveCriticalSection(&cs);
 	return 1;
 }
 

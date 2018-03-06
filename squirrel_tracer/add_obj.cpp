@@ -2,10 +2,6 @@
 #include <vector>
 #include <list>
 
-template<typename T> static json_t *add_refcounted(FILE *file, T *o);
-template<typename T> static json_t *obj_to_json(FILE *file, T *o);
-
-
 static json_t *hex_to_json(uint32_t hex)
 {
 	char string[] = "0x00000000";
@@ -13,9 +9,9 @@ static json_t *hex_to_json(uint32_t hex)
 	return json_string(string);
 }
 
-template<> static json_t *obj_to_json(FILE *file, SQString *o) { return json_stringn(o->_val, o->_len); }
+template<> json_t *SquirrelTracer::obj_to_json(SQString *o) { return json_stringn(o->_val, o->_len); }
 
-template<> static json_t *obj_to_json(FILE *file, SQTable *o)
+template<> json_t *SquirrelTracer::obj_to_json(SQTable *o)
 {
 	json_t *res = json_object();
 	json_object_set_new(res, "ObjectType", json_string("SQTable"));
@@ -23,24 +19,24 @@ template<> static json_t *obj_to_json(FILE *file, SQTable *o)
 	json_t *nodes = json_array();
 	for (int i = 0; i < o->_numofnodes; i++) {
 		json_t *node = json_object();
-		json_object_set_new(node, "key", add_obj(file, &o->_nodes[i].key));
-		json_object_set_new(node, "val", add_obj(file, &o->_nodes[i].val));
+		json_object_set_new(node, "key", add_obj(&o->_nodes[i].key));
+		json_object_set_new(node, "val", add_obj(&o->_nodes[i].val));
 		json_array_append_new(nodes, node);
 	}
 	json_object_set_new(res, "_nodes", nodes);
 	return res;
 }
 
-template<> static json_t *obj_to_json(FILE *file, SQArray *o)
+template<> json_t *SquirrelTracer::obj_to_json(SQArray *o)
 {
 	json_t *res = json_array();
 	for (unsigned int i = 0; i < o->_values.size(); i++) {
-		json_array_append_new(res, add_obj(file, &o->_values._vals[i]));
+		json_array_append_new(res, add_obj(&o->_values._vals[i]));
 	}
 	return res;
 }
 
-template<> static json_t *obj_to_json(FILE *file, SQUserData *o)
+template<> json_t *SquirrelTracer::obj_to_json(SQUserData *o)
 {
 	json_t *res = json_object();
 	json_object_set_new(res, "ObjectType", json_string("SQUserData"));
@@ -58,42 +54,42 @@ template<> static json_t *obj_to_json(FILE *file, SQUserData *o)
 	return res;
 }
 
-template<> static json_t *obj_to_json(FILE *file, SQClosure *o)
+template<> json_t *SquirrelTracer::obj_to_json(SQClosure *o)
 {
 	json_t *res = json_object();
 	json_object_set_new(res, "ObjectType", json_string("SQClosure"));
-	json_object_set_new(res, "_function", add_refcounted<SQFunctionProto>(file, o->_function));
+	json_object_set_new(res, "_function", add_refcounted<SQFunctionProto>(o->_function));
 	return res;
 }
 
-template<> static json_t *obj_to_json(FILE *file, SQNativeClosure *o)
+template<> json_t *SquirrelTracer::obj_to_json(SQNativeClosure *o)
 {
 	json_t *res = json_object();
 	json_object_set_new(res, "ObjectType", json_string("SQNativeClosure"));
-	json_object_set_new(res, "_name", add_obj(file, &o->_name));
+	json_object_set_new(res, "_name", add_obj(&o->_name));
 	json_object_set_new(res, "_function", hex_to_json((uint32_t)o->_function));
 	return res;
 }
 
-template<> static json_t *obj_to_json(FILE *file, SQGenerator *o)
+template<> json_t *SquirrelTracer::obj_to_json(SQGenerator *o)
 {
 	json_t *res = json_object();
 	json_object_set_new(res, "ObjectType", json_string("SQGenerator"));
-	json_object_set_new(res, "_closure", add_obj(file, &o->_closure));
+	json_object_set_new(res, "_closure", add_obj(&o->_closure));
 	// We may also want to print some things from SQVM::CallInfo _ci and from SQGeneratorState _state
 	return res;
 }
 
-template<> static json_t *obj_to_json(FILE *file, SQFunctionProto *o)
+template<> json_t *SquirrelTracer::obj_to_json(SQFunctionProto *o)
 {
 	json_t *res = json_object();
 	json_object_set_new(res, "ObjectType", json_string("SQFunctionProto"));
-	json_object_set_new(res, "_sourcename", add_obj(file, &o->_sourcename));
-	json_object_set_new(res, "_name", add_obj(file, &o->_name));
+	json_object_set_new(res, "_sourcename", add_obj(&o->_sourcename));
+	json_object_set_new(res, "_name", add_obj(&o->_name));
 	return res;
 }
 
-template<> static json_t *obj_to_json(FILE *file, SQClassMemberVec *o)
+template<> json_t *SquirrelTracer::obj_to_json(SQClassMemberVec *o)
 {
 	json_t *res = json_array();
 	for (unsigned int i = 0; i < o->size(); i++) {
@@ -107,58 +103,57 @@ template<> static json_t *obj_to_json(FILE *file, SQClassMemberVec *o)
 	return res;
 }
 
-template<> static json_t *obj_to_json(FILE *file, SQClass *o)
+template<> json_t *SquirrelTracer::obj_to_json(SQClass *o)
 {
 	json_t *res = json_object();
 	json_object_set_new(res, "ObjectType", json_string("SQClass"));
 	if (o->_base) {
-		json_object_set_new(res, "_base", add_refcounted<SQClass>(file, o->_base));
+		json_object_set_new(res, "_base", add_refcounted<SQClass>(o->_base));
 	}
-	json_object_set_new(res, "_members", add_refcounted<SQTable>(file, o->_members));
-	json_object_set_new(res, "_defaultvalues", add_refcounted<SQClassMemberVec>(file, &o->_defaultvalues));
-	json_object_set_new(res, "_methods", add_refcounted<SQClassMemberVec>(file, &o->_methods));
+	json_object_set_new(res, "_members", add_refcounted<SQTable>(o->_members));
+	json_object_set_new(res, "_defaultvalues", add_refcounted<SQClassMemberVec>(&o->_defaultvalues));
+	json_object_set_new(res, "_methods", add_refcounted<SQClassMemberVec>(&o->_methods));
 	return res;
 }
 
-template<> static json_t *obj_to_json(FILE *file, SQInstance *o)
+template<> json_t *SquirrelTracer::obj_to_json(SQInstance *o)
 {
 	json_t *res = json_object();
 	json_object_set_new(res, "ObjectType", json_string("SQInstance"));
-	json_object_set_new(res, "_class", add_refcounted<SQClass>(file, o->_class));
+	json_object_set_new(res, "_class", add_refcounted<SQClass>(o->_class));
 
 	json_t *_values = json_array();
 	size_t _values_size = o->_class->_defaultvalues.size(); // ... I guess?
 
 	for (size_t i = 0; i < _values_size; i++) {
-		json_array_append_new(_values, add_obj(file, &o->_values[i]));
+		json_array_append_new(_values, add_obj(&o->_values[i]));
 	}
 
 	json_object_set_new(res, "_values", _values);
 	return res;
 }
 
-template<> static json_t *obj_to_json(FILE *file, SQWeakRef *o)
+template<> json_t *SquirrelTracer::obj_to_json(SQWeakRef *o)
 {
 	json_t *res = json_object();
 	json_object_set_new(res, "ObjectType", json_string("SQWeakRef"));
-	json_object_set_new(res, "_obj", add_obj(file, &o->_obj));
+	json_object_set_new(res, "_obj", add_obj(&o->_obj));
 	return res;
 }
 
-template<> static json_t *obj_to_json(FILE *file, SQOuter *o)
+template<> json_t *SquirrelTracer::obj_to_json(SQOuter *o)
 {
 	json_t *res = json_object();
 	json_object_set_new(res, "ObjectType", json_string("SQOuter"));
-	json_object_set_new(res, "_valptr", add_obj(file, o->_valptr));
-	json_object_set_new(res, "_value", add_obj(file, &o->_value));
+	json_object_set_new(res, "_valptr", add_obj(o->_valptr));
+	json_object_set_new(res, "_value", add_obj(&o->_value));
 	return res;
 }
 
 static std::list<void*> *stack = nullptr;
-extern ObjectDumpCollection *objs_list;
 
 template<typename T>
-static json_t *add_refcounted(FILE *file, T *o)
+json_t *SquirrelTracer::add_refcounted(T *o)
 {
 	// TODO: use something based on std::vector to reduce allocations
 	if (!stack) {
@@ -180,14 +175,14 @@ static json_t *add_refcounted(FILE *file, T *o)
 	}
 	stack->push_back(o);
 
-	ObjectDump& dump = (*objs_list)[o];
+	ObjectDump& dump = objs_list[o];
 	// TODO: create the json object only when dump.equal(o, sizeof(T)) == false
-	json_t *obj_json = obj_to_json<T>(file, o);
+	json_t *obj_json = this->obj_to_json<T>(o);
 	if (dump.equal(o, sizeof(T)) == false) {
 		// Even when the objects differ, if the JSON dump is identical, we don't need to replace it.
 		if (dump.equal(obj_json) == false) {
 			dump.set(o, sizeof(T), obj_json);
-			dump.writeToFile(file);
+			dump.writeToFile(this->file);
 		}
 	}
 	json_decref(obj_json);
@@ -196,7 +191,7 @@ static json_t *add_refcounted(FILE *file, T *o)
 	return res;
 }
 
-json_t *add_obj(FILE *file, SQObject *o)
+json_t *SquirrelTracer::add_obj(SQObject *o)
 {
 	if (!o) {
 		return json_null();
@@ -232,43 +227,43 @@ json_t *add_obj(FILE *file, SQObject *o)
 	else {
 		switch (o->_type) {
 		case OT_STRING:
-			return add_refcounted<SQString>(file, o->_unVal.pString);
+			return add_refcounted<SQString>(o->_unVal.pString);
 
 		case OT_TABLE:
-			return add_refcounted<SQTable>(file, o->_unVal.pTable);
+			return add_refcounted<SQTable>(o->_unVal.pTable);
 
 		case OT_ARRAY:
-			return add_refcounted<SQArray>(file, o->_unVal.pArray);
+			return add_refcounted<SQArray>(o->_unVal.pArray);
 
 		case OT_USERDATA:
-			return add_refcounted<SQUserData>(file, o->_unVal.pUserData);
+			return add_refcounted<SQUserData>(o->_unVal.pUserData);
 
 		case OT_CLOSURE:
-			return add_refcounted<SQClosure>(file, o->_unVal.pClosure);
+			return add_refcounted<SQClosure>(o->_unVal.pClosure);
 
 		case OT_NATIVECLOSURE:
-			return add_refcounted<SQNativeClosure>(file, o->_unVal.pNativeClosure);
+			return add_refcounted<SQNativeClosure>(o->_unVal.pNativeClosure);
 
 		case OT_GENERATOR:
-			return add_refcounted<SQGenerator>(file, o->_unVal.pGenerator);
+			return add_refcounted<SQGenerator>(o->_unVal.pGenerator);
 
 		case OT_THREAD:
 			return json_string("<thread>"); // Type: SQVM. I don't think we're interested by its content.
 
 		case OT_FUNCPROTO:
-			return add_refcounted<SQFunctionProto>(file, o->_unVal.pFunctionProto);
+			return add_refcounted<SQFunctionProto>(o->_unVal.pFunctionProto);
 
 		case OT_CLASS:
-			return add_refcounted<SQClass>(file, o->_unVal.pClass);
+			return add_refcounted<SQClass>(o->_unVal.pClass);
 
 		case OT_INSTANCE:
-			return add_refcounted<SQInstance>(file, o->_unVal.pInstance);
+			return add_refcounted<SQInstance>(o->_unVal.pInstance);
 
 		case OT_WEAKREF:
-			return add_refcounted<SQWeakRef>(file, o->_unVal.pWeakRef);
+			return add_refcounted<SQWeakRef>(o->_unVal.pWeakRef);
 
 		case OT_OUTER:
-			return add_refcounted<SQOuter>(file, o->_unVal.pOuter);
+			return add_refcounted<SQOuter>(o->_unVal.pOuter);
 
 		default:
 			char string[1024] = "<unknown refcounted type 0000000000>";

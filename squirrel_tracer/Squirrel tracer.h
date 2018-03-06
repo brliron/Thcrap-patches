@@ -35,8 +35,6 @@
 
 #include <map>
 
-json_t *add_obj(FILE *file, SQObject *o);
-
 class ObjectDump
 {
 private:
@@ -73,6 +71,35 @@ public:
 	~ObjectDumpCollection();
 
 	void unmapAll();
+};
+
+enum ArgType;
+
+class SquirrelTracer
+{
+private:
+	CRITICAL_SECTION cs;
+	FILE *file;
+	ObjectDumpCollection objs_list;
+	void *prev_closure;
+
+	SQVM *vm;
+
+	json_t *arg_to_json(ArgType type, uint32_t arg);
+	json_t *add_obj(SQObject *o);
+	template<typename T> json_t *add_refcounted(T *o);
+	template<typename T> json_t *obj_to_json(T *o);
+
+public:
+	SquirrelTracer();
+	~SquirrelTracer();
+
+	void enter(SQVM *vm);
+	void leave();
+
+	void add_instruction(SQInstruction *_i_);
+
+	json_t *add_STK(int i) { return add_obj(&this->vm->_stack._vals[this->vm->_stackbase + i]); }
 };
 
 #endif
