@@ -178,6 +178,7 @@ void SquirrelTracer::add_instruction(SQInstruction *_i_)
 	json_t *instruction = json_object();
 
 	json_object_set_new(instruction, "type", json_string("instruction"));
+	json_object_set_new(instruction, "fn", json_string(this->fn.c_str()));
 	json_object_set_new(instruction, "op", json_string(desc->name));
 
 	switch (_i_->op) {
@@ -272,7 +273,6 @@ void SquirrelTracer::add_instruction(SQInstruction *_i_)
 }
 
 SquirrelTracer::SquirrelTracer()
-	: prev_closure(0)
 {
 	InitializeCriticalSection(&this->cs);
 	this->file = fopen("trace.json", "w");
@@ -289,18 +289,18 @@ void SquirrelTracer::enter(SQVM *vm)
 {
 	EnterCriticalSection(&this->cs);
 	this->vm = vm;
-
-	if (vm->ci->_closure._unVal.pClosure != this->prev_closure) {
-		log_printf("In closure %p\n", vm->ci->_closure._unVal.pClosure);
-		this->prev_closure = vm->ci->_closure._unVal.pClosure;
-	}
+	this->fn = this->closureDB.get(vm->ci->_closure._unVal.pClosure).c_str();
 }
 
 void SquirrelTracer::leave()
 {
 	this->objs_list.unmapAll();
+	this->fn.clear();
+	this->vm = nullptr;
 	LeaveCriticalSection(&this->cs);
 }
+
+static SquirrelTracer *tracer = nullptr;
 
 /**
   * switch instruction in SQVM::execute
@@ -314,7 +314,6 @@ extern "C" int BP_SQVM_execute_switch(x86_reg_t *regs, json_t *bp_info)
 	SQInstruction *_i_ = (SQInstruction*)json_object_get_immediate(bp_info, regs, "instruction");
 	// ----------
 
-	static SquirrelTracer *tracer = nullptr;
 	if (!tracer) {
 		tracer = new SquirrelTracer();
 	}
@@ -339,7 +338,9 @@ extern "C" int BP_sq_readclosure(x86_reg_t *regs, json_t *bp_info)
 	SQObjectPtr *closure = (SQObjectPtr*)json_object_get_immediate(bp_info, regs, "closure");
 	// ----------
 
-	log_printf("Reading closure %p\n", closure->_unVal.pClosure);
+	if (tracer && closure) {
+		tracer->closureDB[closure->_unVal.pClosure] = tracer->closureDB.lastFileName;
+	}
 	return 1;
 }
 
@@ -354,8 +355,8 @@ int BP_file_name_for_squirrel(x86_reg_t *regs, json_t *bp_info)
 	const char *filename = (const char*)json_object_get_immediate(bp_info, regs, "file_name");
 	// ----------
 
-	if (filename) {
-		log_printf("Loading %s\n", filename);
+	if (tracer && filename && strcmp(PathFindExtension(filename), ".nut") == 0) {
+		tracer->closureDB.lastFileName = filename;
 	}
 	return 1;
 }

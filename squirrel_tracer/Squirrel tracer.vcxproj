@@ -60,7 +60,7 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>$(ThcrapDir)\bin\thcrap_d.lib;$(ThcrapDir)\bin\jansson_d.lib;$(ThcrapDir)\bin\win32_utf8_dynamic_x86_debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;$(ThcrapDir)\bin\thcrap_d.lib;$(ThcrapDir)\bin\jansson_d.lib;$(ThcrapDir)\bin\win32_utf8_dynamic_x86_debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -73,12 +73,13 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>$(ThcrapDir)\bin\thcrap.lib;$(ThcrapDir)\bin\jansson.lib;$(ThcrapDir)\bin\win32_utf8_dynamic_x86.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;$(ThcrapDir)\bin\thcrap.lib;$(ThcrapDir)\bin\jansson.lib;$(ThcrapDir)\bin\win32_utf8_dynamic_x86.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Squirrel tracer.h" />
     <ClCompile Include="add_obj.cpp" />
+    <ClCompile Include="ClosureDB.cpp" />
     <ClCompile Include="ObjectDump.cpp" />
     <ClCompile Include="printObj.cpp" />
     <ClCompile Include="Squirrel tracer.cpp">

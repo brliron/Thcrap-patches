@@ -73,6 +73,21 @@ public:
 	void unmapAll();
 };
 
+class ClosureDB : public std::map<SQClosure*, std::string>
+{
+private:
+	SQClosure * lastClosure; // Closure for the last instruction.
+	std::string lastClosureFn; // File name for the last instruction. Used for caching.
+
+public:
+	std::string lastFileName; // File name of the last nut file loaded.
+
+	ClosureDB();
+	~ClosureDB();
+
+	const std::string& get(SQClosure *closure);
+};
+
 enum ArgType;
 
 class SquirrelTracer
@@ -81,9 +96,9 @@ private:
 	CRITICAL_SECTION cs;
 	FILE *file;
 	ObjectDumpCollection objs_list;
-	void *prev_closure;
 
 	SQVM *vm;
+	std::string fn;
 
 	json_t *arg_to_json(ArgType type, uint32_t arg);
 	json_t *add_obj(SQObject *o);
@@ -91,6 +106,8 @@ private:
 	template<typename T> json_t *obj_to_json(T *o);
 
 public:
+	ClosureDB closureDB;
+
 	SquirrelTracer();
 	~SquirrelTracer();
 
