@@ -102,6 +102,7 @@ template<> static json_t *obj_to_json(FILE *file, SQClassMemberVec *o)
 		json_object_set_new(json, "_ismethod", _ismethod(it) ? json_true() : json_false());
 		json_object_set_new(json, "_isfield", _isfield(it) ? json_true() : json_false());
 		json_object_set_new(json, "_member_idx", json_integer(_member_idx(it)));
+		json_array_append_new(res, json);
 	}
 	return res;
 }
@@ -132,7 +133,7 @@ template<> static json_t *obj_to_json(FILE *file, SQInstance *o)
 		json_array_append_new(_values, add_obj(file, &o->_values[i]));
 	}
 
-	json_object_set_new(res, "_values", hex_to_json((uint32_t)&o->_values));
+	json_object_set_new(res, "_values", _values);
 	return res;
 }
 
