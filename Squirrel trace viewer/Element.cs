@@ -33,6 +33,8 @@ namespace Squirrel_trace_viewer
         public virtual void Load(Dictionary<UInt32, AElement> objects)
         { }
 
+        public virtual bool Contains(string value) => this.Description().Contains(value);
+
         public static AElement Create(JToken obj)
         {
             switch (obj.Type)
@@ -100,6 +102,16 @@ namespace Squirrel_trace_viewer
             arg3.Load(objects);
         }
 
+        public override bool Contains(string value)
+        {
+            return this.fn.Contains(value) ||
+                this.op.Contains(value) ||
+                this.arg0.Contains(value) ||
+                this.arg1.Contains(value) ||
+                this.arg2.Contains(value) ||
+                this.arg3.Contains(value);
+        }
+
         public override void AddChildsToTree(ItemCollection items)
         {
             items.Add(new TreeViewItem() { Header = "op: " + op });
@@ -117,6 +129,7 @@ namespace Squirrel_trace_viewer
 
         public override JTokenType Type => JTokenType.Null;
         public override string Description() => "null";
+        public override bool Contains(string value) => false;
     }
 
     class Boolean : AElement
@@ -261,6 +274,14 @@ namespace Squirrel_trace_viewer
                 items.Add(item);
             }
         }
+
+        public override bool Contains(string value)
+        {
+            foreach (var it in elems)
+                if (it.Value.Contains(value))
+                    return true;
+            return false;
+        }
     }
 
     class SQTable : JsonObject
@@ -312,6 +333,13 @@ namespace Squirrel_trace_viewer
                 Console.WriteLine("Unknown object at address " + addr);
                 target = null;
             }
+        }
+
+        public override bool Contains(string value)
+        {
+            if (target == null)
+                return false;
+            return target.Contains(value);
         }
 
         public override string Description()
@@ -377,6 +405,14 @@ namespace Squirrel_trace_viewer
         {
             foreach (AElement it in elems)
                 it.Load(objects);
+        }
+
+        public override bool Contains(string value)
+        {
+            foreach (var it in elems)
+                if (it.Contains(value))
+                    return true;
+            return false;
         }
 
         public override string GetTreeLabel() => "Array";

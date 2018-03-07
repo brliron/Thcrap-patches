@@ -24,9 +24,16 @@ namespace Squirrel_trace_viewer
     /// </summary>
     public partial class MainWindow : Window
     {
+        List<Instruction> instructionsList;
+        List<Instruction> searchBoxMatches;
+        int searchBoxMatchesPos;
+
         public MainWindow()
         {
             InitializeComponent();
+            instructionsList = new List<Instruction>();
+            searchBoxMatches = new List<Instruction>();
+            searchBoxMatchesPos = 0;
         }
 
         private void Load_json(object sender, RoutedEventArgs e)
@@ -85,7 +92,7 @@ namespace Squirrel_trace_viewer
             }
 
             JArray root = (JArray)rootToken;
-            List<Instruction> list = new List<Instruction>();
+            instructionsList = new List<Instruction>();
             Dictionary<UInt32, AElement> objects = new Dictionary<uint, AElement>();
             foreach (JObject it in root)
             {
@@ -93,7 +100,7 @@ namespace Squirrel_trace_viewer
                 {
                     Instruction instruction = new Instruction(it);
                     instruction.Load(objects);
-                    list.Add(instruction);
+                    instructionsList.Add(instruction);
                 }
                 else if ((string)it["type"] == "object")
                 {
@@ -109,7 +116,7 @@ namespace Squirrel_trace_viewer
                 }
             }
 
-            grid.ItemsSource = list;
+            grid.ItemsSource = instructionsList;
             return true;
         }
 
@@ -160,6 +167,57 @@ namespace Squirrel_trace_viewer
         private void ExpandAll_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             ExpandAll(e.Source as TreeViewItem);
+        }
+
+        private void FilterBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            string text = (sender as TextBox).Text;
+            // TODO: filter in a background thread.
+            grid.ItemsSource = instructionsList.Where(x => x.Contains(text));
+        }
+
+        private void selectSearchResult()
+        {
+            int count = searchBoxMatches.Count;
+            if (searchBoxMatchesPos >= count)
+                searchBoxMatchesPos = count - 1;
+            if (searchBoxMatchesPos < 0)
+                searchBoxMatchesPos = 0;
+            if (count != 0)
+            {
+                Instruction i = searchBoxMatches[searchBoxMatchesPos];
+                grid.SelectedItem = i;
+                grid.ScrollIntoView(i);
+            }
+            if (searchBoxMatchesPos > 0)
+                search_prev.IsEnabled = true;
+            else
+                search_prev.IsEnabled = false;
+            if (searchBoxMatchesPos < count - 1)
+                search_next.IsEnabled = true;
+            else
+                search_next.IsEnabled = false;
+        }
+
+        private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            string text = (sender as TextBox).Text;
+            // TODO: filter in a background thread.
+            searchBoxMatches = (grid.ItemsSource as IEnumerable<Instruction>).Where(x => x.Contains(text)).ToList();
+            searchBoxMatchesPos = 0;
+            selectSearchResult();
+        }
+
+        private void SearchBox_prev(object sender, RoutedEventArgs e)
+        {
+            searchBoxMatchesPos--;
+            selectSearchResult();
+        }
+
+        private void SearchBox_next(object sender, RoutedEventArgs e)
+        {
+            searchBoxMatchesPos++;
+            selectSearchResult();
         }
     }
 

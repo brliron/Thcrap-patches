@@ -20,9 +20,26 @@
             <ColumnDefinition Width="5" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
-        <Menu Grid.Row="0" Grid.ColumnSpan="3" DockPanel.Dock="Top">
-            <MenuItem Header="_Open..." Click="Load_json" />
-        </Menu>
+        <Grid Grid.Row="0" Grid.ColumnSpan="3" DockPanel.Dock="Top">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Menu Grid.Column="0">
+                <MenuItem Header="_Open..." Click="Load_json" />
+            </Menu>
+            <TextBlock Grid.Column="1" Margin="5px 0 5px 0">Filter:</TextBlock>
+            <TextBox Grid.Column="2" TextChanged="FilterBox_TextChanged" />
+            <TextBlock Grid.Column="3" Margin="5px 0 5px 0">Search:</TextBlock>
+            <TextBox Grid.Column="4" TextChanged="SearchBox_TextChanged" />
+            <Button Grid.Column="5" Name="search_prev" Content="Previous" Click="SearchBox_prev" />
+            <Button Grid.Column="6" Name="search_next" Content="Next" Click="SearchBox_next" />
+        </Grid>
         <DataGrid Grid.Row="1" Grid.Column="0" Name="grid" CanUserSortColumns="False" SelectedCellsChanged="grid_SelectedCellsChanged" />
         <GridSplitter Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch" />
         <TreeView Grid.Row="2" Grid.Column="2" Name="tree" DockPanel.Dock="Right">
