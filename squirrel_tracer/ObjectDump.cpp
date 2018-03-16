@@ -142,7 +142,7 @@ bool ObjectDump::equal(const json_t *json)
 	if (this->json == nullptr) {
 		return false;
 	}
-	return json_equal(this->json, json) == 0;
+	return json_equal(this->json, json) != 0;
 }
 
 void ObjectDump::writeToFile(FILE *file)
