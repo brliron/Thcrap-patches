@@ -34,6 +34,7 @@
 #ifdef __cplusplus
 
 #include <map>
+#include <stack>
 
 class ObjectDump
 {
@@ -64,12 +65,17 @@ public:
 	void unmap();
 };
 
-class ObjectDumpCollection : public std::map<void*, ObjectDump>
+class ObjectDumpCollection
 {
+private:
+	std::map<void*, ObjectDump> map;
+	std::stack<ObjectDump*> mappedObjects;
+
 public:
 	ObjectDumpCollection();
 	~ObjectDumpCollection();
 
+	ObjectDump& operator[](void* key);
 	void unmapAll();
 };
 
