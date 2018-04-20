@@ -174,6 +174,10 @@ json_t *SquirrelTracer::arg_to_json(ArgType type, uint32_t arg)
 
 void SquirrelTracer::add_instruction(SQInstruction *_i_)
 {
+	if (!this->enabled) {
+		return;
+	}
+
 	OpcodeDescriptor *desc = &opcodes[_i_->op];
 	json_t *instruction = json_object();
 
@@ -273,6 +277,7 @@ void SquirrelTracer::add_instruction(SQInstruction *_i_)
 }
 
 SquirrelTracer::SquirrelTracer()
+	: enabled(true)
 {
 	InitializeCriticalSection(&this->cs);
 	this->file = fopen("trace.json", "w");
@@ -287,6 +292,15 @@ SquirrelTracer::~SquirrelTracer()
 
 void SquirrelTracer::enter(SQVM *vm)
 {
+	if (GetAsyncKeyState('O') & 0x8000) {
+		this->enabled = !this->enabled;
+		log_mboxf(NULL, MB_OK, "SquirrelTracer is now %s.\n"
+			"To toggle the SquirrelTracer state, press the 'O' key.",
+			this->enabled ? "enabled" : "disabled");
+	}
+	if (!this->enabled) {
+		return;
+	}
 	EnterCriticalSection(&this->cs);
 	this->vm = vm;
 	this->fn = this->closureDB.get(vm->ci->_closure._unVal.pClosure).c_str();
@@ -294,6 +308,9 @@ void SquirrelTracer::enter(SQVM *vm)
 
 void SquirrelTracer::leave()
 {
+	if (!this->enabled) {
+		return;
+	}
 	this->objs_list.unmapAll();
 	this->fn.clear();
 	this->vm = nullptr;

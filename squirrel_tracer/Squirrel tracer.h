@@ -102,6 +102,7 @@ private:
 	CRITICAL_SECTION cs;
 	FILE *file;
 	ObjectDumpCollection objs_list;
+	bool enabled;
 
 	SQVM *vm;
 	std::string fn;
